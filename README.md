@@ -1,1 +1,1 @@
-# cmsc124
+CMSC 124 Project
