@@ -1,0 +1,5 @@
+Token(type=LET, lexeme=let, literal=null, line=1)
+Token(type=IDENTIFIER, lexeme=x, literal=null, line=1)
+Token(type=EQUAL, lexeme==, literal=null, line=1)
+Token(type=SEMICOLON, lexeme=;, literal=null, line=1)
+Token(type=EOF, lexeme=, literal=null, line=1)
