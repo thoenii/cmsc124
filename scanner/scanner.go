@@ -7,11 +7,12 @@ import (
 )
 
 type Scanner struct {
-	source  string
-	tokens  []Token
-	start   int
-	current int
-	line    int
+	source   string
+	tokens   []Token
+	start    int
+	current  int
+	line     int
+	hadError bool
 }
 
 var keywords = map[string]TokenType{
@@ -51,6 +52,18 @@ func (s *Scanner) identifier() {
 	} else {
 		s.addToken(IDENTIFIER)
 	}
+}
+
+// reportError prints a scan-time error to stderr and marks the scanner
+// as having encountered an error, without halting the scan.
+func (s *Scanner) reportError(line int, message string) {
+	fmt.Fprintf(os.Stderr, "[line %d] Error: %s\n", line, message)
+	s.hadError = true
+}
+
+// HadError reports whether any error was encountered during scanning.
+func (s *Scanner) HadError() bool {
+	return s.hadError
 }
 
 // isAtEnd reports whether the scanner has consumed all source characters
@@ -105,10 +118,7 @@ func (s *Scanner) blockComment() {
 			s.advance()
 		}
 	}
-	// TODO: replace with s.reportError(s.line, "Unterminated block comment")
-	// once reportError() is implemented, so this also sets the had-error
-	// flag and gets picked up by main.go's exit-65 check.
-	fmt.Fprintf(os.Stderr, "[line %d] Error: Unterminated block comment\n", s.line)
+	s.reportError(s.line, "Unterminated block comment")
 }
 
 func isAlpha(c rune) bool {
@@ -181,10 +191,7 @@ func (s *Scanner) scanToken() {
 		if isAlpha(rune(c)) {
 			s.identifier()
 		} else {
-			// TODO: replace with s.reportError(s.line, fmt.Sprintf("Unexpected character '%c'", c))
-			// once reportError() is implemented, so this also sets the had-error
-			// flag and gets picked up by main.go's exit-65 check.
-			fmt.Fprintf(os.Stderr, "[line %d] Error: Unexpected character '%c'\n", s.line, c)
+			s.reportError(s.line, fmt.Sprintf("Unexpected character '%c'", c))
 		}
 	}
 }
