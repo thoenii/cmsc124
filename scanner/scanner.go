@@ -3,6 +3,7 @@ package scanner
 import (
 	"fmt"
 	"os"
+	"unicode"
 )
 
 type Scanner struct {
@@ -11,6 +12,17 @@ type Scanner struct {
 	start   int
 	current int
 	line    int
+}
+
+var keywords = map[string]TokenType{
+	"let":   LET,
+	"print": PRINT,
+	"if":    IF,
+	"else":  ELSE,
+	"for":   FOR,
+	"true":  TRUE,
+	"false": FALSE,
+	"none":  NONE,
 }
 
 // NewScanner creates a Scanner for the given source string, starting at line 1
@@ -26,6 +38,19 @@ func (s *Scanner) ScanTokens() []Token {
 	}
 	s.tokens = append(s.tokens, Token{Type: EOF, Lexeme: "", Literal: nil, Line: s.line})
 	return s.tokens
+}
+
+func (s *Scanner) identifier() {
+	for isAlphaNumeric(rune(s.peek())) {
+		s.advance()
+	}
+	text := s.source[s.start:s.current]
+
+	if tokenType, ok := keywords[text]; ok {
+		s.addToken(tokenType)
+	} else {
+		s.addToken(IDENTIFIER)
+	}
 }
 
 // isAtEnd reports whether the scanner has consumed all source characters
@@ -86,6 +111,14 @@ func (s *Scanner) blockComment() {
 	fmt.Fprintf(os.Stderr, "[line %d] Error: Unterminated block comment\n", s.line)
 }
 
+func isAlpha(c rune) bool {
+	return c == '_' || unicode.IsLetter(c)
+}
+
+func isAlphaNumeric(c rune) bool {
+	return c == '_' || unicode.IsLetter(c) || unicode.IsDigit(c)
+}
+
 // addToken creates a token from source[start:current] and appends it to tokens
 func (s *Scanner) addToken(tokenType TokenType) {
 	text := s.source[s.start:s.current]
@@ -144,5 +177,14 @@ func (s *Scanner) scanToken() {
 		s.line++
 	case ' ', '\t', '\r':
 		// ignore whitespace
+	default:
+		if isAlpha(rune(c)) {
+			s.identifier()
+		} else {
+			// TODO: replace with s.reportError(s.line, fmt.Sprintf("Unexpected character '%c'", c))
+			// once reportError() is implemented, so this also sets the had-error
+			// flag and gets picked up by main.go's exit-65 check.
+			fmt.Fprintf(os.Stderr, "[line %d] Error: Unexpected character '%c'\n", s.line, c)
+		}
 	}
 }
