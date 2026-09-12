@@ -1,5 +1,10 @@
 package scanner
 
+import (
+	"fmt"
+	"os"
+)
+
 type Scanner struct {
 	source  string
 	tokens  []Token
@@ -46,6 +51,41 @@ func (s *Scanner) match(expected byte) bool {
 	}
 }
 
+func (s *Scanner) peek() byte {
+	if s.isAtEnd() {
+		return 0
+	} else {
+		return s.source[s.current]
+	}
+}
+
+func (s *Scanner) peekNext() byte {
+	if s.current+1 >= len(s.source) {
+		return 0
+	} else {
+		return s.source[s.current+1]
+	}
+}
+
+func (s *Scanner) blockComment() {
+	for !s.isAtEnd() {
+		if s.peek() == '*' && s.peekNext() == '/' {
+			s.advance()
+			s.advance()
+			return
+		} else if s.peek() == '\n' {
+			s.line++
+			s.advance()
+		} else {
+			s.advance()
+		}
+	}
+	// TODO: replace with s.reportError(s.line, "Unterminated block comment")
+	// once reportError() is implemented, so this also sets the had-error
+	// flag and gets picked up by main.go's exit-65 check.
+	fmt.Fprintf(os.Stderr, "[line %d] Error: Unterminated block comment\n", s.line)
+}
+
 // addToken creates a token from source[start:current] and appends it to tokens
 func (s *Scanner) addToken(tokenType TokenType) {
 	text := s.source[s.start:s.current]
@@ -73,7 +113,15 @@ func (s *Scanner) scanToken() {
 	case '*':
 		s.addToken(STAR)
 	case '/':
-		s.addToken(SLASH)
+		if s.match('/') {
+			for s.peek() != '\n' && !s.isAtEnd() {
+				s.advance()
+			}
+		} else if s.match('*') {
+			s.blockComment()
+		} else {
+			s.addToken(SLASH)
+		}
 	case '=':
 		if s.match('=') {
 			s.addToken(EQUAL_EQUAL)
