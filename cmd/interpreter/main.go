@@ -31,19 +31,21 @@ func main() {
 	}
 }
 
-// runFile reads a source file, scans it into tokens, and prints them
+// runFile reads a source file, scans it into tokens, and prints them.
+// Exits 65 if the scanner reported any error, 0 on a fully clean scan.
 func runFile(path string) {
-	data, err := os.ReadFile(path)
-
+	source, err := os.ReadFile(path)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Could not read file:", err)
-		os.Exit(65) // exit code 65: bad input file
+		fmt.Fprintf(os.Stderr, "Could not read file %q: %v\n", path, err)
+		os.Exit(64)
 	}
 
-	s := scanner.NewScanner(string(data))
-	tokens := s.ScanTokens()
+	sc := scanner.NewScanner(string(source))
+	tokens := sc.ScanTokens()
 
-	// print each token in a readable format
+	// print each token in the frozen Token(...) format — same shape as
+	// runRepl() below, kept inline here rather than as a shared method
+	// since Token has no String() method defined
 	for _, tok := range tokens {
 		var literal interface{} = "null"
 		if tok.Literal != nil {
@@ -51,13 +53,21 @@ func runFile(path string) {
 		}
 		fmt.Printf("Token(type=%s, lexeme=%s, literal=%v, line=%d)\n", tok.Type, tok.Lexeme, literal, tok.Line)
 	}
+
+	// only exit 65 once the whole file has been scanned, per the "keep
+	// scanning after an error" contract — never bail out mid-scan
+	if sc.HadError() {
+		os.Exit(65)
+	}
+	os.Exit(0)
 }
 
-/* runRepl reads one line at a time from stdin, scans it, and prints its
-   tokens. A bad line must not kill the session, so errors from a single
-   line are reported and the loop continues to the next prompt.
-*/
+/*
+runRepl reads one line at a time from stdin, scans it, and prints its
 
+	tokens. A bad line must not kill the session, so errors from a single
+	line are reported and the loop continues to the next prompt.
+*/
 func runRepl() {
 	scannerInput := bufio.NewScanner(os.Stdin)
 
