@@ -19,7 +19,7 @@ func (s *Scanner) ScanTokens() []Token {
 		s.start = s.current
 		s.scanToken()
 	}
-	s.tokens = append(s.tokens, Token{Type: "EOF", Lexeme: "", Literal: nil, Line: s.line})
+	s.tokens = append(s.tokens, Token{Type: EOF, Lexeme: "", Literal: nil, Line: s.line})
 	return s.tokens
 }
 
@@ -36,7 +36,7 @@ func (s *Scanner) advance() byte {
 }
 
 // addToken creates a token from source[start:current] and appends it to tokens
-func (s *Scanner) addToken(tokenType string) {
+func (s *Scanner) addToken(tokenType TokenType) {
 	text := s.source[s.start:s.current]
 	s.tokens = append(s.tokens, Token{Type: tokenType, Lexeme: text, Literal: nil, Line: s.line})
 }
@@ -46,27 +46,27 @@ func (s *Scanner) scanToken() {
 	c := s.advance()
 	switch c {
 	case '(':
-		s.addToken("LEFT_PAREN")
+		s.addToken(LEFT_PAREN)
 	case ')':
-		s.addToken("RIGHT_PAREN")
+		s.addToken(RIGHT_PAREN)
 	case '{':
-		s.addToken("LEFT_BRACE")
+		s.addToken(LEFT_BRACE)
 	case '}':
-		s.addToken("RIGHT_BRACE")
+		s.addToken(RIGHT_BRACE)
 	case ';':
-		s.addToken("SEMICOLON")
+		s.addToken(SEMICOLON)
 	case '+':
-		s.addToken("PLUS")
+		s.addToken(PLUS)
 	case '-':
-		s.addToken("MINUS")
+		s.addToken(MINUS)
 	case '*':
-		s.addToken("STAR")
+		s.addToken(STAR)
 	case '/':
-		s.addToken("SLASH")
+		s.addToken(SLASH)
 	case '<':
-		s.addToken("LESS")
+		s.addToken(LESS)
 	case '>':
-		s.addToken("GREATER")
+		s.addToken(GREATER)
 	case '\n':
 		s.line++
 	case ' ', '\t', '\r':

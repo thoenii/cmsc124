@@ -1,5 +1,5 @@
 {
-  "ext": ".viper",
-  "flag": "--tokenize",
+  "ext": ".src",
+  "run_entrypoint": "--tokenize",
   "mode": "sidecar"
 }
