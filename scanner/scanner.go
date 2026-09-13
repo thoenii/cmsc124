@@ -35,6 +35,17 @@ func (s *Scanner) advance() byte {
 	return c
 }
 
+func (s *Scanner) match(expected byte) bool {
+	if s.isAtEnd() {
+		return false
+	} else if s.source[s.current] != expected {
+		return false
+	} else {
+		s.current++
+		return true
+	}
+}
+
 // addToken creates a token from source[start:current] and appends it to tokens
 func (s *Scanner) addToken(tokenType TokenType) {
 	text := s.source[s.start:s.current]
@@ -63,10 +74,24 @@ func (s *Scanner) scanToken() {
 		s.addToken(STAR)
 	case '/':
 		s.addToken(SLASH)
+	case '=':
+		if s.match('=') {
+			s.addToken(EQUAL_EQUAL)
+		} else {
+			s.addToken(EQUAL)
+		}
 	case '<':
-		s.addToken(LESS)
+		if s.match('=') {
+			s.addToken(LESS_EQUAL)
+		} else {
+			s.addToken(LESS)
+		}
 	case '>':
-		s.addToken(GREATER)
+		if s.match('=') {
+			s.addToken(GREATER_EQUAL)
+		} else {
+			s.addToken(GREATER)
+		}
 	case '\n':
 		s.line++
 	case ' ', '\t', '\r':

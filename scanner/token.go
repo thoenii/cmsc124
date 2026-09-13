@@ -17,6 +17,12 @@ const (
 	LESS    TokenType = "LESS"
 	GREATER TokenType = "GREATER"
 
+	EQUAL         TokenType = "EQUAL"
+	EQUAL_EQUAL   TokenType = "EQUAL_EQUAL"
+	BANG_EQUAL    TokenType = "BANG_EQUAL"
+	LESS_EQUAL    TokenType = "LESS_EQUAL"
+	GREATER_EQUAL TokenType = "GREATER_EQUAL"
+
 	EOF TokenType = "EOF"
 )
 
