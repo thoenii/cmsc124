@@ -1,0 +1,6 @@
+Token(type=NUMBER, lexeme=123, literal=123, line=1)
+Token(type=NUMBER, lexeme=6767, literal=6767, line=2)
+Token(type=NUMBER, lexeme=10.07, literal=10.07, line=3)
+Token(type=NUMBER, lexeme=0.5, literal=0.5, line=4)
+Token(type=NUMBER, lexeme=101.404, literal=101.404, line=5)
+Token(type=EOF, lexeme=, literal=null, line=5)
