@@ -24,6 +24,7 @@ const (
 	GREATER_EQUAL TokenType = "GREATER_EQUAL"
 
 	IDENTIFIER TokenType = "IDENTIFIER"
+	NUMBER 	   TokenType = "NUMBER"
 
 	LET   TokenType = "LET"
 	PRINT TokenType = "PRINT"

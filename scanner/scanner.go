@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"unicode"
+	"strconv"
 )
 
 type Scanner struct {
@@ -54,6 +55,33 @@ func (s *Scanner) identifier() {
 	}
 }
 
+// for scanning a number
+func (s *Scanner) number() {
+	// read all digits before the decimal point
+	for unicode.IsDigit(rune(s.peek())) {
+		s.advance()
+	}
+
+	// look for a decimal point followed by at least one digit
+	if s.peek() == '.' && unicode.IsDigit(rune(s.peekNext())) {
+		s.advance()
+
+		for unicode.IsDigit(rune(s.peek())) {
+			s.advance()
+		}
+	}
+
+	// convert the lexeme into a float64.
+	value, err := strconv.ParseFloat(s.source[s.start:s.current], 64)
+
+	if err != nil {
+		s.reportError(s.line, "Invalid number")
+		return
+	}
+
+	s.addTokenLiteral(NUMBER, value)
+}
+
 // reportError prints a scan-time error to stderr and marks the scanner
 // as having encountered an error, without halting the scan.
 func (s *Scanner) reportError(line int, message string) {
@@ -89,6 +117,7 @@ func (s *Scanner) match(expected byte) bool {
 	}
 }
 
+// looks at the current character
 func (s *Scanner) peek() byte {
 	if s.isAtEnd() {
 		return 0
@@ -97,6 +126,7 @@ func (s *Scanner) peek() byte {
 	}
 }
 
+// peekNext is a lookahead function
 func (s *Scanner) peekNext() byte {
 	if s.current+1 >= len(s.source) {
 		return 0
@@ -133,6 +163,13 @@ func isAlphaNumeric(c rune) bool {
 func (s *Scanner) addToken(tokenType TokenType) {
 	text := s.source[s.start:s.current]
 	s.tokens = append(s.tokens, Token{Type: tokenType, Lexeme: text, Literal: nil, Line: s.line})
+}
+
+// addTokenLiteral creates a token with a literal value
+func(s *Scanner) addTokenLiteral(tokenType TokenType, literal any) {
+	text := s.source[s.start:s.current]
+
+	s.tokens = append(s.tokens, Token {Type: tokenType, Lexeme: text, Literal: literal, Line: s.line})
 }
 
 // scanToken consumes one character and produces the matching token, if any
@@ -188,7 +225,9 @@ func (s *Scanner) scanToken() {
 	case ' ', '\t', '\r':
 		// ignore whitespace
 	default:
-		if isAlpha(rune(c)) {
+		if unicode.IsDigit(rune(c)) {
+			s.number()
+		} else if isAlpha(rune(c)) {
 			s.identifier()
 		} else {
 			s.reportError(s.line, fmt.Sprintf("Unexpected character '%c'", c))
