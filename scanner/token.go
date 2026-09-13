@@ -25,6 +25,7 @@ const (
 
 	IDENTIFIER TokenType = "IDENTIFIER"
 	NUMBER 	   TokenType = "NUMBER"
+	STRING 	   TokenType = "STRING"
 
 	LET   TokenType = "LET"
 	PRINT TokenType = "PRINT"

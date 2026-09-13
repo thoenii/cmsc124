@@ -82,6 +82,29 @@ func (s *Scanner) number() {
 	s.addTokenLiteral(NUMBER, value)
 }
 
+// for scanning a string
+func (s *Scanner) string() {
+	// scans until finding the closing quotation mark
+	for s.peek() != '"' && !s.isAtEnd() {
+		if s.peek() == '\n' {
+			s.line++
+		}
+		s.advance()
+	}
+
+	// report unterminated string without closing quotation mark
+	if s.isAtEnd() {
+		s.reportError(s.line, "Unterminated String")
+		return
+	}
+	s.advance()
+
+	// remove enclosing quotes and getting the string value
+	value := s.source[s.start+1 : s.current-1]
+
+	s.addTokenLiteral(STRING, value)
+}
+
 // reportError prints a scan-time error to stderr and marks the scanner
 // as having encountered an error, without halting the scan.
 func (s *Scanner) reportError(line int, message string) {
@@ -224,6 +247,8 @@ func (s *Scanner) scanToken() {
 		s.line++
 	case ' ', '\t', '\r':
 		// ignore whitespace
+	case '"':
+		s.string()
 	default:
 		if unicode.IsDigit(rune(c)) {
 			s.number()
