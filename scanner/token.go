@@ -23,6 +23,17 @@ const (
 	LESS_EQUAL    TokenType = "LESS_EQUAL"
 	GREATER_EQUAL TokenType = "GREATER_EQUAL"
 
+	IDENTIFIER TokenType = "IDENTIFIER"
+
+	LET   TokenType = "LET"
+	PRINT TokenType = "PRINT"
+	IF    TokenType = "IF"
+	ELSE  TokenType = "ELSE"
+	FOR   TokenType = "FOR"
+	TRUE  TokenType = "TRUE"
+	FALSE TokenType = "FALSE"
+	NONE  TokenType = "NONE"
+
 	EOF TokenType = "EOF"
 )
 
