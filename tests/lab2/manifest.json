@@ -1,0 +1,6 @@
+{
+  "ext": ".viper",
+  "mode": "sidecar",
+  "run_entrypoint": "./run",
+  "flag": "--parse"
+}
