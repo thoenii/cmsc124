@@ -9,10 +9,11 @@ const (
 	RIGHT_BRACE TokenType = "RIGHT_BRACE"
 	SEMICOLON   TokenType = "SEMICOLON"
 
-	PLUS  TokenType = "PLUS"
-	MINUS TokenType = "MINUS"
-	STAR  TokenType = "STAR"
-	SLASH TokenType = "SLASH"
+	PLUS      TokenType = "PLUS"
+	MINUS     TokenType = "MINUS"
+	STAR      TokenType = "STAR"
+	SLASH     TokenType = "SLASH"
+	PLUS_PLUS TokenType = "PLUS_PLUS"
 
 	LESS    TokenType = "LESS"
 	GREATER TokenType = "GREATER"
@@ -24,14 +25,15 @@ const (
 	GREATER_EQUAL TokenType = "GREATER_EQUAL"
 
 	IDENTIFIER TokenType = "IDENTIFIER"
-	NUMBER 	   TokenType = "NUMBER"
-	STRING 	   TokenType = "STRING"
+	NUMBER     TokenType = "NUMBER"
+	STRING     TokenType = "STRING"
 
 	LET   TokenType = "LET"
 	PRINT TokenType = "PRINT"
 	IF    TokenType = "IF"
 	ELSE  TokenType = "ELSE"
 	FOR   TokenType = "FOR"
+	WHILE TokenType = "WHILE"
 	TRUE  TokenType = "TRUE"
 	FALSE TokenType = "FALSE"
 	NONE  TokenType = "NONE"
