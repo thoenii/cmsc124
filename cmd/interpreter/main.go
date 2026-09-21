@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"cmsc124/scanner"
+	"cmsc124/parser"
 	"fmt"
 	"os"
 )
@@ -18,6 +19,9 @@ func main() {
 	case len(args) == 2 && args[0] == "--tokenize":
 		// tokenize flag: scan one file and print its token stream
 		runFile(args[1])
+
+	case len(args) == 2 && args[0] == "--parse":
+    	runParseFile(args[1])
 
 	case len(args) == 1:
 		// bare "./run <path>": preserve Lab 0's original contract unchanged,
@@ -59,6 +63,33 @@ func runFile(path string) {
 	if sc.HadError() {
 		os.Exit(65)
 	}
+	os.Exit(0)
+}
+
+// runParseFile scans a file, parses its tokens, and prints the AST.
+func runParseFile(path string) {
+	source, err := os.ReadFile(path)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Could not read file %q: %v\n", path, err)
+		os.Exit(64)
+	}
+
+	sc := scanner.NewScanner(string(source))
+	tokens := sc.ScanTokens()
+
+	// Stop if scanning encountered an error.
+	if sc.HadError() {
+		os.Exit(65)
+	}
+
+	p := parser.NewParser(tokens)
+	expr, err := p.Parse()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(65)
+	}
+
+	fmt.Println(parser.PrintExpr(expr))
 	os.Exit(0)
 }
 
