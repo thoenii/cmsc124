@@ -3,8 +3,8 @@ package scanner
 import (
 	"fmt"
 	"os"
-	"unicode"
 	"strconv"
+	"unicode"
 )
 
 type Scanner struct {
@@ -17,14 +17,15 @@ type Scanner struct {
 }
 
 var keywords = map[string]TokenType{
-	"let":   LET,
-	"print": PRINT,
-	"if":    IF,
-	"else":  ELSE,
-	"for":   FOR,
-	"true":  TRUE,
-	"false": FALSE,
-	"none":  NONE,
+	"fang":    LET,
+	"hiss":    PRINT,
+	"if":      IF,
+	"else":    ELSE,
+	"coil":    FOR,
+	"slither": WHILE,
+	"true":    TRUE,
+	"false":   FALSE,
+	"dead":    NONE,
 }
 
 // NewScanner creates a Scanner for the given source string, starting at line 1
@@ -189,10 +190,10 @@ func (s *Scanner) addToken(tokenType TokenType) {
 }
 
 // addTokenLiteral creates a token with a literal value
-func(s *Scanner) addTokenLiteral(tokenType TokenType, literal any) {
+func (s *Scanner) addTokenLiteral(tokenType TokenType, literal any) {
 	text := s.source[s.start:s.current]
 
-	s.tokens = append(s.tokens, Token {Type: tokenType, Lexeme: text, Literal: literal, Line: s.line})
+	s.tokens = append(s.tokens, Token{Type: tokenType, Lexeme: text, Literal: literal, Line: s.line})
 }
 
 // scanToken consumes one character and produces the matching token, if any
@@ -210,7 +211,11 @@ func (s *Scanner) scanToken() {
 	case ';':
 		s.addToken(SEMICOLON)
 	case '+':
-		s.addToken(PLUS)
+		if s.match('+') {
+			s.addToken(PLUS_PLUS)
+		} else {
+			s.addToken(PLUS)
+		}
 	case '-':
 		s.addToken(MINUS)
 	case '*':
