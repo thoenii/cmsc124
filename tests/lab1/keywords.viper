@@ -1,2 +1,2 @@
-let greeting = "hello"
-print greeting
+fang greeting = "hello"
+hiss greeting
