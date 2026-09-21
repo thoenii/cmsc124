@@ -21,6 +21,7 @@ func main() {
 		runFile(args[1])
 
 	case len(args) == 2 && args[0] == "--parse":
+		// for parsing 
     	runParseFile(args[1])
 
 	case len(args) == 1:
