@@ -85,12 +85,49 @@ func (s *Scanner) number() {
 
 // for scanning a string
 func (s *Scanner) string() {
+	var value []byte
+
 	// scans until finding the closing quotation mark
 	for s.peek() != '"' && !s.isAtEnd() {
-		if s.peek() == '\n' {
+		c := s.peek()
+
+		if c == '\n' {
 			s.line++
+			value = append(value, c)
+			s.advance()
+		} else if c == '\\' {
+			s.advance()
+			escapeChar := s.peek()
+
+			switch escapeChar {
+			case 'n':
+				value = append(value, '\n')
+			case '"':
+				value = append(value, '"')
+			case '\\':
+				value = append(value, '\\')
+			default:
+				s.reportError(s.line, fmt.Sprintf("Unsupported escape sequence '\\%c'", escapeChar))
+
+				// discard the rest of the broken string up to the closing quote
+				for s.peek() != '"' && !s.isAtEnd() {
+					if s.peek() == '\n' {
+						s.line++
+					}
+					s.advance()
+				}
+
+				if s.isAtEnd() {
+					return
+				}
+				s.advance() // consume closing quote
+				return
+			}
+			s.advance()
+		} else {
+			value = append(value, c)
+			s.advance()
 		}
-		s.advance()
 	}
 
 	// report unterminated string without closing quotation mark
@@ -100,10 +137,7 @@ func (s *Scanner) string() {
 	}
 	s.advance()
 
-	// remove enclosing quotes and getting the string value
-	value := s.source[s.start+1 : s.current-1]
-
-	s.addTokenLiteral(STRING, value)
+	s.addTokenLiteral(STRING, string(value))
 }
 
 // reportError prints a scan-time error to stderr and marks the scanner
