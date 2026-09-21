@@ -39,18 +39,20 @@ Exit codes: 0 for successful execution, 65 for static errors (including lexical 
 
 | Keyword | Purpose |
 |---|---|
-| let | declares a variable |
-| print | outputs a value |
+| fang | declares a variable |
+| hiss | outputs a value |
 | if | conditional statement |
 | else | alternative for a conditional statement |
-| for | creates a loop |
+| coil | creates a loop (for-style, with initializer, condition, and increment) |
+| slither | creates a loop that repeats while a condition holds |
 | true | boolean literal equal to true |
 | false | boolean literal equal to false |
-| none | absence of values |
+| dead | absence of values |
+
+Keyword lexemes follow a snake theme. Internal token types (LET, PRINT, FOR, WHILE, NONE) stay the same regardless of how the keyword is spelled, since the token type identifies the grammar category and the lexeme is just the surface spelling.
 
 
 ### Operators
-
 
 | Operator | Category | Operands | Associativity | Precedence |
 |---|---|---|---|---|
@@ -67,8 +69,8 @@ Exit codes: 0 for successful execution, 65 for static errors (including lexical 
 | / | arithmetic | binary | left | [TBD] |
 | ++ | increment | unary | left | [TBD] |
 
-### Literals
 
+### Literals
 
 | Kind | Syntax | Produces |
 |---|---|---|
@@ -86,8 +88,10 @@ Instead, it must be written as: 5.0
 Strings may span multiple lines.
 The ff. escape sequences are supported:
 \n newline
-\” quotation mark
-\\ backlash
+\" quotation mark
+\\ backslash
+
+Any other escape sequence (e.g. \t) is a scan-time error. The rest of the string is discarded up to its closing quote and scanning resumes after it.
 
 ### Identifiers
 
@@ -157,6 +161,7 @@ Keywords
 -IF
 -ELSE
 -FOR
+-WHILE
 -TRUE
 -FALSE
 -NONE
@@ -296,8 +301,7 @@ The language was designed to be dynamically typed and intentionally small enough
 
 ## Changelog
 
-
 | Activity | What changed in the language |
 |---|---|
-| Lab 1 | Defined the language identity, file format, lexical structure, token vocabulary, comments, whitespace rules, numeric literal rules, string rules, scanner errors, and token output format.  |
-
+| Lab 1 | Defined the language identity, file format, lexical structure, token vocabulary, comments, whitespace rules, numeric literal rules, string rules, scanner errors, and token output format. |
+| Lab 1 (theme and loops) | Reskinned keyword lexemes to a viper theme (fang, hiss, coil, dead). Added the WHILE token and slither keyword for while-style loops. Added the PLUS_PLUS token for the ++ operator. Implemented actual translation of string escape sequences (\n, \", \\), with a scan error for any unsupported escape. |
