@@ -1,0 +1,1 @@
+hiss "bad \t escape";

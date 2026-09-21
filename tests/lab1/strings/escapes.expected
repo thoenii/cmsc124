@@ -1,0 +1,11 @@
+Token(type=PRINT, lexeme=hiss, literal=null, line=1)
+Token(type=STRING, lexeme="quote: \" done", literal=quote: " done, line=1)
+Token(type=SEMICOLON, lexeme=;, literal=null, line=1)
+Token(type=PRINT, lexeme=hiss, literal=null, line=2)
+Token(type=STRING, lexeme="backslash: \\ done", literal=backslash: \ done, line=2)
+Token(type=SEMICOLON, lexeme=;, literal=null, line=2)
+Token(type=PRINT, lexeme=hiss, literal=null, line=3)
+Token(type=STRING, lexeme="newline: \n done", literal=newline: 
+ done, line=3)
+Token(type=SEMICOLON, lexeme=;, literal=null, line=3)
+Token(type=EOF, lexeme=, literal=null, line=3)

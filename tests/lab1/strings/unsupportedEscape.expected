@@ -1,0 +1,3 @@
+Token(type=PRINT, lexeme=hiss, literal=null, line=1)
+Token(type=SEMICOLON, lexeme=;, literal=null, line=1)
+Token(type=EOF, lexeme=, literal=null, line=1)

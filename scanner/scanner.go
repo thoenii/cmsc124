@@ -3,8 +3,8 @@ package scanner
 import (
 	"fmt"
 	"os"
-	"unicode"
 	"strconv"
+	"unicode"
 )
 
 type Scanner struct {
@@ -17,14 +17,15 @@ type Scanner struct {
 }
 
 var keywords = map[string]TokenType{
-	"let":   LET,
-	"print": PRINT,
-	"if":    IF,
-	"else":  ELSE,
-	"for":   FOR,
-	"true":  TRUE,
-	"false": FALSE,
-	"none":  NONE,
+	"fang":    LET,
+	"hiss":    PRINT,
+	"if":      IF,
+	"else":    ELSE,
+	"coil":    FOR,
+	"slither": WHILE,
+	"true":    TRUE,
+	"false":   FALSE,
+	"dead":    NONE,
 }
 
 // NewScanner creates a Scanner for the given source string, starting at line 1
@@ -84,12 +85,49 @@ func (s *Scanner) number() {
 
 // for scanning a string
 func (s *Scanner) string() {
+	var value []byte
+
 	// scans until finding the closing quotation mark
 	for s.peek() != '"' && !s.isAtEnd() {
-		if s.peek() == '\n' {
+		c := s.peek()
+
+		if c == '\n' {
 			s.line++
+			value = append(value, c)
+			s.advance()
+		} else if c == '\\' {
+			s.advance()
+			escapeChar := s.peek()
+
+			switch escapeChar {
+			case 'n':
+				value = append(value, '\n')
+			case '"':
+				value = append(value, '"')
+			case '\\':
+				value = append(value, '\\')
+			default:
+				s.reportError(s.line, fmt.Sprintf("Unsupported escape sequence '\\%c'", escapeChar))
+
+				// discard the rest of the broken string up to the closing quote
+				for s.peek() != '"' && !s.isAtEnd() {
+					if s.peek() == '\n' {
+						s.line++
+					}
+					s.advance()
+				}
+
+				if s.isAtEnd() {
+					return
+				}
+				s.advance() // consume closing quote
+				return
+			}
+			s.advance()
+		} else {
+			value = append(value, c)
+			s.advance()
 		}
-		s.advance()
 	}
 
 	// report unterminated string without closing quotation mark
@@ -99,10 +137,7 @@ func (s *Scanner) string() {
 	}
 	s.advance()
 
-	// remove enclosing quotes and getting the string value
-	value := s.source[s.start+1 : s.current-1]
-
-	s.addTokenLiteral(STRING, value)
+	s.addTokenLiteral(STRING, string(value))
 }
 
 // reportError prints a scan-time error to stderr and marks the scanner
@@ -189,10 +224,10 @@ func (s *Scanner) addToken(tokenType TokenType) {
 }
 
 // addTokenLiteral creates a token with a literal value
-func(s *Scanner) addTokenLiteral(tokenType TokenType, literal any) {
+func (s *Scanner) addTokenLiteral(tokenType TokenType, literal any) {
 	text := s.source[s.start:s.current]
 
-	s.tokens = append(s.tokens, Token {Type: tokenType, Lexeme: text, Literal: literal, Line: s.line})
+	s.tokens = append(s.tokens, Token{Type: tokenType, Lexeme: text, Literal: literal, Line: s.line})
 }
 
 // scanToken consumes one character and produces the matching token, if any
@@ -210,7 +245,11 @@ func (s *Scanner) scanToken() {
 	case ';':
 		s.addToken(SEMICOLON)
 	case '+':
-		s.addToken(PLUS)
+		if s.match('+') {
+			s.addToken(PLUS_PLUS)
+		} else {
+			s.addToken(PLUS)
+		}
 	case '-':
 		s.addToken(MINUS)
 	case '*':

@@ -1,4 +1,5 @@
-let x = y;
-print x;
-if true { z } else { none }
-for i foo_bar1
+fang x = y;
+hiss x;
+if true { z } else { dead }
+coil i foo_bar1
+slither i foo_bar1
