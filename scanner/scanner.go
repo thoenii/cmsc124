@@ -50,7 +50,16 @@ func (s *Scanner) identifier() {
 	text := s.source[s.start:s.current]
 
 	if tokenType, ok := keywords[text]; ok {
-		s.addToken(tokenType)
+		switch tokenType {
+		case TRUE:
+			s.addTokenLiteral(TRUE, true)
+		case FALSE:
+			s.addTokenLiteral(FALSE, false)
+		case NONE:
+			s.addTokenLiteral(NONE, nil)
+		default:
+			s.addToken(tokenType)
+		}
 	} else {
 		s.addToken(IDENTIFIER)
 	}
