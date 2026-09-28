@@ -1,13 +1,30 @@
 package parser
 
 import (
-	"fmt"
 	"cmsc124/scanner"
+	"fmt"
 )
 
 type Parser struct {
-	tokens []scanner.Token
+	tokens  []scanner.Token
 	current int
+}
+
+// ParseAll parses every expression in the token stream, one after another,
+// until EOF is reached. It returns the list of successfully parsed
+// expressions and the first error encountered, if any.
+func (p *Parser) ParseAll() ([]Expr, error) {
+	var exprs []Expr
+
+	for !p.isAtEnd() {
+		expr, err := p.expression()
+		if err != nil {
+			return nil, err
+		}
+		exprs = append(exprs, expr)
+	}
+
+	return exprs, nil
 }
 
 // creates a parser for tokens
@@ -140,14 +157,15 @@ func (p *Parser) equality() (Expr, error) {
 
 // parser for literals and grouped expressions
 func (p *Parser) primary() (Expr, error) {
-	if p.match(scanner.NUMBER, scanner.STRING, scanner.TRUE, scanner.FALSE, scanner.NONE){
+	if p.match(scanner.NUMBER, scanner.STRING, scanner.TRUE, scanner.FALSE, scanner.NONE) {
 		return LiteralExpr{Value: p.previous().Literal}, nil
 	}
 
 	if p.match(scanner.LEFT_PAREN) {
 		expr, err := p.expression()
-		if err != nil {return nil, err}
-	
+		if err != nil {
+			return nil, err
+		}
 
 		if !p.match(scanner.RIGHT_PAREN) {
 			return nil, fmt.Errorf("[line %d] Expect ')' after expression", p.peek().Line)
@@ -159,7 +177,7 @@ func (p *Parser) primary() (Expr, error) {
 	return nil, fmt.Errorf("[line %d] Expect expression", p.peek().Line)
 }
 
-// checks current token 
+// checks current token
 func (p *Parser) check(tokenType scanner.TokenType) bool {
 	if p.isAtEnd() {
 		return tokenType == scanner.EOF
@@ -171,14 +189,15 @@ func (p *Parser) check(tokenType scanner.TokenType) bool {
 // checks the current token to match the token types
 func (p *Parser) match(types ...scanner.TokenType) bool {
 	for _, tokenType := range types {
-		if p.check(tokenType) {p.advance() 
+		if p.check(tokenType) {
+			p.advance()
 			return true
 		}
 	}
 	return false
 }
 
-// consume and return token 
+// consume and return token
 func (p *Parser) advance() scanner.Token {
 	if !p.isAtEnd() {
 		p.current++
@@ -198,4 +217,3 @@ func (p *Parser) previous() scanner.Token {
 func (p *Parser) isAtEnd() bool {
 	return p.peek().Type == scanner.EOF
 }
-
