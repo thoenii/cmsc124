@@ -21,11 +21,11 @@ func (p *Parser) Parse() (Expr, error) {
 }
 
 func (p *Parser) expression() (Expr, error) {
-	return p.term()
+	return p.equality()
 }
 
-func (p *Parser) term() (Expr, error){
-	expr, err := p.primary()
+func (p *Parser) term() (Expr, error) {
+	expr, err := p.factor()
 	if err != nil {
 		return nil, err
 	}
@@ -34,13 +34,105 @@ func (p *Parser) term() (Expr, error){
 	for p.match(scanner.PLUS, scanner.MINUS) {
 		operator := p.previous()
 
-		right, err := p.primary()
-		if err != nil {return nil, err}
+		right, err := p.factor()
+		if err != nil {
+			return nil, err
+		}
 
 		expr = BinaryExpr{
-			Left: 	  expr, 
-			Operator: operator, 
-			Right: 	  right,
+			Left:     expr,
+			Operator: operator,
+			Right:    right,
+		}
+	}
+	return expr, nil
+}
+
+func (p *Parser) factor() (Expr, error) {
+	expr, err := p.unary()
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse repeated * and / operations
+	for p.match(scanner.STAR, scanner.SLASH) {
+		operator := p.previous()
+
+		right, err := p.unary() // fixed: was p.primary()
+		if err != nil {
+			return nil, err
+		}
+
+		expr = BinaryExpr{
+			Left:     expr,
+			Operator: operator,
+			Right:    right,
+		}
+	}
+	return expr, nil
+}
+
+func (p *Parser) unary() (Expr, error) {
+	if p.match(scanner.MINUS) {
+		operator := p.previous()
+
+		right, err := p.unary()
+		if err != nil {
+			return nil, err
+		}
+
+		return UnaryExpr{
+			Operator: operator,
+			Right:    right,
+		}, nil
+	}
+
+	return p.primary()
+}
+
+func (p *Parser) comparison() (Expr, error) {
+	expr, err := p.term()
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse repeated <, <=, >, and >= operations
+	for p.match(scanner.GREATER, scanner.GREATER_EQUAL, scanner.LESS, scanner.LESS_EQUAL) {
+		operator := p.previous()
+
+		right, err := p.term()
+		if err != nil {
+			return nil, err
+		}
+
+		expr = BinaryExpr{
+			Left:     expr,
+			Operator: operator,
+			Right:    right,
+		}
+	}
+	return expr, nil
+}
+
+func (p *Parser) equality() (Expr, error) {
+	expr, err := p.comparison()
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse repeated == and != operations
+	for p.match(scanner.EQUAL_EQUAL, scanner.BANG_EQUAL) {
+		operator := p.previous()
+
+		right, err := p.comparison()
+		if err != nil {
+			return nil, err
+		}
+
+		expr = BinaryExpr{
+			Left:     expr,
+			Operator: operator,
+			Right:    right,
 		}
 	}
 	return expr, nil
