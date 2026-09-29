@@ -2,8 +2,8 @@ package main
 
 import (
 	"bufio"
-	"cmsc124/scanner"
 	"cmsc124/parser"
+	"cmsc124/scanner"
 	"fmt"
 	"os"
 )
@@ -21,8 +21,8 @@ func main() {
 		runFile(args[1])
 
 	case len(args) == 2 && args[0] == "--parse":
-		// for parsing 
-    	runParseFile(args[1])
+		// for parsing
+		runParseFile(args[1])
 
 	case len(args) == 1:
 		// bare "./run <path>": preserve Lab 0's original contract unchanged,
@@ -84,13 +84,15 @@ func runParseFile(path string) {
 	}
 
 	p := parser.NewParser(tokens)
-	expr, err := p.Parse()
+	exprs, err := p.ParseAll()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(65)
 	}
 
-	fmt.Println(parser.PrintExpr(expr))
+	for _, expr := range exprs {
+		fmt.Println(parser.PrintExpr(expr))
+	}
 	os.Exit(0)
 }
 
