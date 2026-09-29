@@ -67,6 +67,8 @@ func (p *Parser) primary() (Expr, error) {
 	return nil, fmt.Errorf("[line %d] Expect expression", p.peek().Line)
 }
 
+// helper functions 
+
 // checks current token 
 func (p *Parser) check(tokenType scanner.TokenType) bool {
 	if p.isAtEnd() {
@@ -94,15 +96,17 @@ func (p *Parser) advance() scanner.Token {
 	return p.previous()
 }
 
-// peeking
+// peek checks the current token
 func (p *Parser) peek() scanner.Token {
 	return p.tokens[p.current]
 }
 
+// previous checks the previous token
 func (p *Parser) previous() scanner.Token {
 	return p.tokens[p.current-1]
 }
 
+// isAtEnd checks end if it is the end of the file
 func (p *Parser) isAtEnd() bool {
 	return p.peek().Type == scanner.EOF
 }
