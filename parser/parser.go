@@ -72,9 +72,15 @@ func (p *Parser) statement() (Stmt, error) {
 }
 
 func (p *Parser) printStatement() (Stmt, error) {
+	if !p.match(scanner.LEFT_PAREN) {
+		return nil, fmt.Errorf("[line %d] Expect '(' after hiss", p.peek().Line)
+	}
 	expr, err := p.expression()
 	if err != nil {
 		return nil, err
+	}
+	if !p.match(scanner.RIGHT_PAREN) {
+		return nil, fmt.Errorf("[line %d] Expect ')' after value", p.peek().Line)
 	}
 	if !p.match(scanner.SEMICOLON) {
 		return nil, fmt.Errorf("[line %d] Expect ';' after value", p.peek().Line)
