@@ -82,6 +82,30 @@ func (p *Parser) printStatement() (Stmt, error) {
 	return HissStmt{Expression: expr}, nil
 }
 
+func (p *Parser) assignment() (Expr, error) {
+	expr, err := p.equality()
+	if err != nil {
+		return nil, err
+	}
+
+	if p.match(scanner.EQUAL) {
+		equals := p.previous()
+
+		value, err := p.assignment() // calls itself so x = y = 3 works
+		if err != nil {
+			return nil, err
+		}
+
+		if variable, ok := expr.(VariableExpr); ok {
+			return AssignExpr{Name: variable.Name, Value: value}, nil
+		}
+
+		return nil, fmt.Errorf("[line %d] Invalid assignment target", equals.Line)
+	}
+
+	return expr, nil
+}
+
 // creates a parser for tokens
 func NewParser(tokens []scanner.Token) *Parser {
 	return &Parser{tokens: tokens}
@@ -93,7 +117,7 @@ func (p *Parser) Parse() (Expr, error) {
 }
 
 func (p *Parser) expression() (Expr, error) {
-	return p.equality()
+	return p.assignment()
 }
 
 func (p *Parser) term() (Expr, error) {
