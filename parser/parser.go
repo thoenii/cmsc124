@@ -10,21 +10,57 @@ type Parser struct {
 	current int
 }
 
-// ParseAll parses every expression in the token stream, one after another,
-// until EOF is reached. It returns the list of successfully parsed
-// expressions and the first error encountered, if any.
-func (p *Parser) ParseAll() ([]Expr, error) {
-	var exprs []Expr
-
+// loops over statements until EOF
+func (p *Parser) ParseProgram() ([]Stmt, error) {
+	var stmts []Stmt
 	for !p.isAtEnd() {
-		expr, err := p.expression()
+		stmt, err := p.declaration()
 		if err != nil {
 			return nil, err
 		}
-		exprs = append(exprs, expr)
+		stmts = append(stmts, stmt)
+	}
+	return stmts, nil
+}
+
+// is it a fang? if not, it's a plain expression statement
+func (p *Parser) declaration() (Stmt, error) {
+	if p.match(scanner.LET) {
+		return p.varDeclaration()
+	}
+	return p.expressionStatement()
+}
+
+func (p *Parser) varDeclaration() (Stmt, error) {
+	if !p.check(scanner.IDENTIFIER) {
+		return nil, fmt.Errorf("[line %d] Expect variable name", p.peek().Line)
+	}
+	name := p.advance()
+
+	var initializer Expr
+	if p.match(scanner.EQUAL) {
+		var err error
+		initializer, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	return exprs, nil
+	if !p.match(scanner.SEMICOLON) {
+		return nil, fmt.Errorf("[line %d] Expect ';' after variable declaration", p.peek().Line)
+	}
+	return VarStmt{Name: name, Initializer: initializer}, nil
+}
+
+func (p *Parser) expressionStatement() (Stmt, error) {
+	expr, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+	if !p.match(scanner.SEMICOLON) {
+		return nil, fmt.Errorf("[line %d] Expect ';' after expression", p.peek().Line)
+	}
+	return ExprStmt{Expression: expr}, nil
 }
 
 // creates a parser for tokens
@@ -159,6 +195,10 @@ func (p *Parser) equality() (Expr, error) {
 func (p *Parser) primary() (Expr, error) {
 	if p.match(scanner.NUMBER, scanner.STRING, scanner.TRUE, scanner.FALSE, scanner.NONE) {
 		return LiteralExpr{Value: p.previous().Literal}, nil
+	}
+
+	if p.match(scanner.IDENTIFIER) {
+		return VariableExpr{Name: p.previous()}, nil
 	}
 
 	if p.match(scanner.LEFT_PAREN) {
