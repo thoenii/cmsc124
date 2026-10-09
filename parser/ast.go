@@ -11,6 +11,32 @@ type Expr interface {
 	exprNode()
 }
 
+type Stmt interface {
+	stmtNode()
+}
+
+// fang x = 5;
+type VarStmt struct {
+	Name        scanner.Token
+	Initializer Expr // nil when there is no "= ..."
+}
+
+func (VarStmt) stmtNode() {}
+
+// an expression followed by ";"
+type ExprStmt struct {
+	Expression Expr
+}
+
+func (ExprStmt) stmtNode() {}
+
+// A variable being used, like x in "x + 1"
+type VariableExpr struct {
+	Name scanner.Token
+}
+
+func (VariableExpr) exprNode() {}
+
 // For literal values (e.g. number, string, boolean, or none)
 type LiteralExpr struct {
 	Value interface{}
@@ -45,10 +71,26 @@ type GroupingExpr struct {
 
 func (GroupingExpr) exprNode() {}
 
+func PrintStmt(stmt Stmt) string {
+	switch s := stmt.(type) {
+	case VarStmt:
+		if s.Initializer == nil {
+			return "(var " + string(s.Name.Lexeme) + ")"
+		}
+		return "(var " + string(s.Name.Lexeme) + " " + PrintExpr(s.Initializer) + ")"
+	case ExprStmt:
+		return PrintExpr(s.Expression)
+	default:
+		return ""
+	}
+}
+
 // PrintExpr converts an AST expression into its string representation.
 func PrintExpr(expr Expr) string {
 	switch e := expr.(type) {
 
+	case VariableExpr:
+		return string(e.Name.Lexeme)
 	case LiteralExpr:
 		// Prints literal based on actual value type
 		switch v := e.Value.(type) {
