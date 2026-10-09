@@ -28,7 +28,7 @@ func (p *Parser) declaration() (Stmt, error) {
 	if p.match(scanner.LET) {
 		return p.varDeclaration()
 	}
-	return p.expressionStatement()
+	return p.statement()
 }
 
 func (p *Parser) varDeclaration() (Stmt, error) {
@@ -61,6 +61,25 @@ func (p *Parser) expressionStatement() (Stmt, error) {
 		return nil, fmt.Errorf("[line %d] Expect ';' after expression", p.peek().Line)
 	}
 	return ExprStmt{Expression: expr}, nil
+}
+
+// is it a hiss? if not, it's a plain expression statement
+func (p *Parser) statement() (Stmt, error) {
+	if p.match(scanner.PRINT) {
+		return p.printStatement()
+	}
+	return p.expressionStatement()
+}
+
+func (p *Parser) printStatement() (Stmt, error) {
+	expr, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+	if !p.match(scanner.SEMICOLON) {
+		return nil, fmt.Errorf("[line %d] Expect ';' after value", p.peek().Line)
+	}
+	return HissStmt{Expression: expr}, nil
 }
 
 // creates a parser for tokens
