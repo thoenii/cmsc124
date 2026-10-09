@@ -78,6 +78,14 @@ type HissStmt struct {
 
 func (HissStmt) stmtNode() {}
 
+// x = 10
+type AssignExpr struct {
+	Name  scanner.Token
+	Value Expr
+}
+
+func (AssignExpr) exprNode() {}
+
 func PrintStmt(stmt Stmt) string {
 	switch s := stmt.(type) {
 	case VarStmt:
@@ -124,6 +132,9 @@ func PrintExpr(expr Expr) string {
 
 	case GroupingExpr:
 		return "(group " + PrintExpr(e.Expression) + ")"
+
+	case AssignExpr:
+		return "(= " + string(e.Name.Lexeme) + " " + PrintExpr(e.Value) + ")"
 
 	default:
 		return ""
