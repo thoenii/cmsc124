@@ -305,6 +305,34 @@ func (p *Parser) block() ([]Stmt, error) {
 	return stmts, nil
 }
 
+// if else conditions
+func (p *Parser) ifStatement() (Stmt, error) {
+	if _, err := p.consume(scanner.LEFT_PAREN, "Expect '(' after 'if'."); err != nil {
+		return nil, err
+	}
+	condition, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+	if _, err := p.consume(scanner.RIGHT_PAREN, "Expect ')' after if condition."); err != nil {
+		return nil, err
+	}
+
+	var elseBranch Stmt
+	if p.match(scanner.ELSE) {
+		elseBranch, err = p.statement()
+		if err != nil {
+			return nil, err
+		}
+	}
+	return IfStmt{
+		Condition:  condition,
+		ThenBranch: nil, // Placeholder for the then branch
+		ElseBranch:  elseBranch,
+	}, nil
+}
+
+
 
 
 
