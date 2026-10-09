@@ -8,6 +8,7 @@ import (
 type Parser struct {
 	tokens  []scanner.Token
 	current int
+	errors  []error
 }
 
 // ParseAll parses every expression in the token stream, one after another,
