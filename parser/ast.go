@@ -71,6 +71,13 @@ type GroupingExpr struct {
 
 func (GroupingExpr) exprNode() {}
 
+// hiss x * 2;
+type HissStmt struct {
+	Expression Expr
+}
+
+func (HissStmt) stmtNode() {}
+
 func PrintStmt(stmt Stmt) string {
 	switch s := stmt.(type) {
 	case VarStmt:
@@ -80,6 +87,8 @@ func PrintStmt(stmt Stmt) string {
 		return "(var " + string(s.Name.Lexeme) + " " + PrintExpr(s.Initializer) + ")"
 	case ExprStmt:
 		return PrintExpr(s.Expression)
+	case HissStmt:
+		return "(print " + PrintExpr(s.Expression) + ")"
 	default:
 		return ""
 	}
