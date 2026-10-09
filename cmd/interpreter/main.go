@@ -84,14 +84,14 @@ func runParseFile(path string) {
 	}
 
 	p := parser.NewParser(tokens)
-	exprs, err := p.ParseAll()
+	exprs, err := p.ParseProgram()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(65)
 	}
 
 	for _, expr := range exprs {
-		fmt.Println(parser.PrintExpr(expr))
+		fmt.Println(parser.PrintStmt(expr))
 	}
 	os.Exit(0)
 }
