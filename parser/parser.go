@@ -3,8 +3,6 @@ package parser
 import (
 	"cmsc124/scanner"
 	"fmt"
-	"errors"
-	"strings"
 )
 
 type Parser struct {
@@ -281,6 +279,34 @@ func (p *Parser) safeDeclaration() Stmt {
 	}
 	return stmt
 }
+
+// blockStatement
+func (p *Parser) blockStatement() (Stmt, error) {
+	stmts, err := p.block()
+	if err != nil {
+		return nil, err
+	}
+	return BlockStmt{Statements: stmts}, nil
+}
+
+// block parses statements until matching '{'
+func (p *Parser) block() ([]Stmt, error) {
+	var stmts []Stmt
+
+	for !p.check(scanner.RIGHT_BRACE) && !p.isAtEnd() {
+		if stmt := p.safeDeclaration(); stmt != nil {
+			stmts = append(stmts, stmt)
+		}
+	}
+
+	if _, err := p.consume(scanner.RIGHT_BRACE, "Expect '}' after block."); err != nil {
+		return nil, err
+	}
+	return stmts, nil
+}
+
+
+
 
 
 
