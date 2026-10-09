@@ -6,86 +6,86 @@ import (
 	"strconv"
 )
 
-// interface for all types of AST expressions
+// ---------- Interfaces ----------
+
+// Expr is implemented by every expression node in the AST.
 type Expr interface {
 	exprNode()
 }
 
+// Stmt is implemented by every statement node in the AST.
 type Stmt interface {
 	stmtNode()
 }
 
-// fang x = 5;
+// ---------- Statements ----------
+
+// VarStmt declares a variable, e.g. `fang x = 5;`
 type VarStmt struct {
 	Name        scanner.Token
 	Initializer Expr // nil when there is no "= ..."
 }
 
-func (VarStmt) stmtNode() {}
-
-// an expression followed by ";"
+// ExprStmt is an expression followed by ";"
 type ExprStmt struct {
 	Expression Expr
 }
 
-func (ExprStmt) stmtNode() {}
-
-// A variable being used, like x in "x + 1"
-type VariableExpr struct {
-	Name scanner.Token
+// HissStmt prints a value, e.g. `hiss x * 2;`
+type HissStmt struct {
+	Expression Expr
 }
 
-func (VariableExpr) exprNode() {}
+func (VarStmt) stmtNode()  {}
+func (ExprStmt) stmtNode() {}
+func (HissStmt) stmtNode() {}
 
-// For literal values (e.g. number, string, boolean, or none)
+// ---------- Expressions ----------
+
+// LiteralExpr holds a literal value (number, string, boolean, or none).
 type LiteralExpr struct {
 	Value interface{}
 }
 
-// marks LiteralExpr as an AST expression
-func (LiteralExpr) exprNode() {}
+// VariableExpr is a variable being used, like x in `x + 1`.
+type VariableExpr struct {
+	Name scanner.Token
+}
 
-// For operatons with two operands (left and right)
+// GroupingExpr is an expression inside parentheses.
+type GroupingExpr struct {
+	Expression Expr
+}
+
+// UnaryExpr is an operation with one operand, e.g. `-x`.
+type UnaryExpr struct {
+	Operator scanner.Token
+	Right    Expr
+}
+
+// BinaryExpr is an operation with two operands, e.g. `a + b`.
 type BinaryExpr struct {
 	Left     Expr
 	Operator scanner.Token
 	Right    Expr
 }
 
-// marks BinaryExpr as an AST expression
-func (BinaryExpr) exprNode() {}
-
-// For operations with only one operand
-type UnaryExpr struct {
-	Operator scanner.Token
-	Right    Expr
-}
-
-// marks UnaryExpr as an AST expression
-func (UnaryExpr) exprNode() {}
-
-// Expression inside the parenthesis
-type GroupingExpr struct {
-	Expression Expr
-}
-
-func (GroupingExpr) exprNode() {}
-
-// hiss x * 2;
-type HissStmt struct {
-	Expression Expr
-}
-
-func (HissStmt) stmtNode() {}
-
-// x = 10
+// AssignExpr assigns a value to an existing variable, e.g. `x = 10`.
 type AssignExpr struct {
 	Name  scanner.Token
 	Value Expr
 }
 
-func (AssignExpr) exprNode() {}
+func (LiteralExpr) exprNode()  {}
+func (VariableExpr) exprNode() {}
+func (GroupingExpr) exprNode() {}
+func (UnaryExpr) exprNode()    {}
+func (BinaryExpr) exprNode()   {}
+func (AssignExpr) exprNode()   {}
 
+// ---------- Printing ----------
+
+// PrintStmt converts a statement into its string representation.
 func PrintStmt(stmt Stmt) string {
 	switch s := stmt.(type) {
 	case VarStmt:
@@ -93,50 +93,56 @@ func PrintStmt(stmt Stmt) string {
 			return "(var " + string(s.Name.Lexeme) + ")"
 		}
 		return "(var " + string(s.Name.Lexeme) + " " + PrintExpr(s.Initializer) + ")"
+
 	case ExprStmt:
 		return PrintExpr(s.Expression)
+
 	case HissStmt:
 		return "(print " + PrintExpr(s.Expression) + ")"
+
 	default:
 		return ""
 	}
 }
 
-// PrintExpr converts an AST expression into its string representation.
+// PrintExpr converts an expression into its string representation.
 func PrintExpr(expr Expr) string {
 	switch e := expr.(type) {
+	case LiteralExpr:
+		return printLiteral(e.Value)
 
 	case VariableExpr:
 		return string(e.Name.Lexeme)
-	case LiteralExpr:
-		// Prints literal based on actual value type
-		switch v := e.Value.(type) {
-		case nil:
-			return "nil"
-		case float64:
-			return strconv.FormatFloat(v, 'f', 1, 64)
-		case string:
-			return v
-		default:
-			return fmt.Sprint(v)
-		}
+
+	case GroupingExpr:
+		return "(group " + PrintExpr(e.Expression) + ")"
+
+	case UnaryExpr:
+		return "(" + string(e.Operator.Lexeme) + " " + PrintExpr(e.Right) + ")"
 
 	case BinaryExpr:
 		return "(" + string(e.Operator.Lexeme) + " " +
 			PrintExpr(e.Left) + " " +
 			PrintExpr(e.Right) + ")"
 
-	case UnaryExpr:
-		return "(" + string(e.Operator.Lexeme) + " " +
-			PrintExpr(e.Right) + ")"
-
-	case GroupingExpr:
-		return "(group " + PrintExpr(e.Expression) + ")"
-
 	case AssignExpr:
 		return "(= " + string(e.Name.Lexeme) + " " + PrintExpr(e.Value) + ")"
 
 	default:
 		return ""
+	}
+}
+
+// printLiteral formats a literal based on its actual value type.
+func printLiteral(value interface{}) string {
+	switch v := value.(type) {
+	case nil:
+		return "nil"
+	case float64:
+		return strconv.FormatFloat(v, 'f', 1, 64) // always one decimal, e.g. 5.0
+	case string:
+		return v
+	default:
+		return fmt.Sprint(v)
 	}
 }
