@@ -82,6 +82,9 @@ func (p *Parser) statement() (Stmt, error) {
 	if p.match(scanner.FOR) {
 		return p.forStatement()
 	}
+	if p.match(scanner.WHILE) {
+		return p.whileStatement()
+	}
 	if p.match(scanner.IF) {
 		return p.ifStatement()
 	}
@@ -211,6 +214,26 @@ func (p *Parser) forStatement() (Stmt, error) {
 		return nil, err
 	}
 	return ForStmt{Initializer: initializer, Condition: condition, Body: body}, nil
+}
+
+// whileStatement parses while condition statements
+func (p *Parser) whileStatement() (Stmt, error) {
+	if _, err := p.consume(scanner.LEFT_PAREN, "Expect '(' after 'while'"); err != nil {
+		return nil, err
+	}
+	condition, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+	if _, err := p.consume(scanner.RIGHT_PAREN, "Expect ')' after while condition"); err != nil {
+		return nil, err
+	}
+
+	body, err := p.statement()
+	if err != nil {
+		return nil, err
+	}
+	return WhileStmt{Condition: condition, Body: body}, nil
 }
 
 
