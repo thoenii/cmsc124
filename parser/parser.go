@@ -79,11 +79,18 @@ func (p *Parser) varDeclaration() (Stmt, error) {
 
 // statement: a hiss (print) statement, or a plain expression statement.
 func (p *Parser) statement() (Stmt, error) {
-	if p.match(scanner.PRINT) {
-		return p.printStatement()
-	}
 	if p.match(scanner.IF) {
 		return p.ifStatement()
+	}
+	if p.match(scanner.LEFT_BRACE) {
+		stmts, err := p.block()
+		if err != nil {
+			return nil, err
+		}
+		return BlockStmt{Statements: stmts}, nil
+	}
+	if p.match(scanner.PRINT) {
+		return p.printStatement()
 	}
 	return p.expressionStatement()
 }
@@ -119,6 +126,29 @@ func (p *Parser) expressionStatement() (Stmt, error) {
 }
 
 // ---------- Control flow ----------
+
+// block parses declarations up until the closing brace
+func (p *Parser) block() ([]Stmt, error) {
+	open := p.previous() 
+	var stmts []Stmt
+
+	for !p.check(scanner.RIGHT_BRACE) && !p.isAtEnd() {
+		stmt, err := p.declaration()
+		if err != nil {
+			p.errors = append(p.errors, err)
+			p.synchronize() // skip to the next statement
+			continue
+		}
+		stmts = append(stmts, stmt)
+	}
+
+	if _, err := p.consume(scanner.RIGHT_BRACE, fmt.Sprintf("Expect '}' to close block opened at line %d", open.Line)); err != nil {
+		return nil, err
+	}
+	return stmts, nil
+}
+
+
 func (p *Parser) ifStatement() (Stmt, error) {
 	if _, err := p.consume(scanner.LEFT_PAREN, "Expect '(' after 'if'"); err != nil {
 		return nil, err
