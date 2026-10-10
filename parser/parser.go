@@ -2,6 +2,7 @@ package parser
 
 import (
 	"cmsc124/scanner"
+	"errors"
 	"fmt"
 )
 
@@ -9,6 +10,7 @@ import (
 type Parser struct {
 	tokens  []scanner.Token
 	current int // index of the next token to read
+	errors []error // errors encountered during parsing
 }
 
 // NewParser creates a parser for the given tokens.
@@ -20,13 +22,19 @@ func NewParser(tokens []scanner.Token) *Parser {
 
 // ParseProgram parses statements until EOF.
 func (p *Parser) ParseProgram() ([]Stmt, error) {
+	p.errors = nil // reset errors for each parse
 	var stmts []Stmt
 	for !p.isAtEnd() {
 		stmt, err := p.declaration()
 		if err != nil {
-			return nil, err
+			p.errors = append(p.errors, err)
+			p.synchronize() // skip to the next statement
+			continue
 		}
 		stmts = append(stmts, stmt)
+	}
+	if len(p.errors) > 0 {
+		return nil, errors.Join(p.errors...)
 	}
 	return stmts, nil
 }
@@ -302,3 +310,46 @@ func (p *Parser) previous() scanner.Token {
 func (p *Parser) isAtEnd() bool {
 	return p.peek().Type == scanner.EOF
 }
+
+// ---------- Error handling ----------
+type ParseError struct {
+	Line int
+	Message string
+}
+
+func (e *ParseError) Error() string {
+	return fmt.Sprintf("[line %d] %s", e.Line, e.Message)
+}
+
+// errorAt reports an error at the current token.
+func (p *Parser) errorAt(token scanner.Token, message string) error {
+	return &ParseError{Line: token.Line, Message: message}
+}
+
+// consume checks that the current token is of the expected type, consumes it, and returns it. If not, it reports an error.
+func (p *Parser) consume(tokenType scanner.TokenType, message string) (scanner.Token, error) {
+	if p.check(tokenType) {
+		return p.advance(), nil
+	}
+	return scanner.Token{}, p.errorAt(p.peek(), message)
+} 
+
+func (p *Parser) synchronize() {
+	p.advance()
+
+	for !p.isAtEnd() {
+		if p.previous().Type == scanner.SEMICOLON {
+			return
+		}
+	switch p.peek().Type {
+		case scanner.LET,
+		scanner.PRINT,
+		scanner.LEFT_BRACE,
+		scanner.RIGHT_BRACE:
+			return
+		}
+		p.advance()
+
+	}
+}
+
