@@ -82,6 +82,9 @@ func (p *Parser) statement() (Stmt, error) {
 	if p.match(scanner.PRINT) {
 		return p.printStatement()
 	}
+	if p.match(scanner.IF) {
+		return p.ifStatement()
+	}
 	return p.expressionStatement()
 }
 
@@ -114,6 +117,36 @@ func (p *Parser) expressionStatement() (Stmt, error) {
 	}
 	return ExprStmt{Expression: expr}, nil
 }
+
+// ---------- Control flow ----------
+func (p *Parser) ifStatement() (Stmt, error) {
+	if _, err := p.consume(scanner.LEFT_PAREN, "Expect '(' after 'if'"); err != nil {
+		return nil, err
+	}
+	condition, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+	if _, err := p.consume(scanner.RIGHT_PAREN, "Expect ')' after if condition"); err != nil {
+		return nil, err
+	}
+
+	thenBranch, err := p.statement()
+	if err != nil {
+		return nil, err
+	}
+
+	//else
+	var elseBranch Stmt
+	if p.match(scanner.ELSE) {
+		elseBranch, err = p.statement()
+		if err != nil {
+			return nil, err
+		}
+	}
+	return IfStmt{Condition: condition, ThenBranch: thenBranch, ElseBranch: elseBranch}, nil
+}
+
 
 // ---------- Expressions (lowest to highest precedence) ----------
 
