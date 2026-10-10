@@ -20,13 +20,17 @@ type Stmt interface {
 
 // ---------- Statements ----------
 
+// BlockStmt is a block of statements, e.g. `{ stmt1; stmt2; }`
+type BlockStmt struct {
+	Statements []Stmt
+}
+
 // IfStmt represents an if statement
 type IfStmt struct {
 	Condition Expr
 	ThenBranch Stmt
 	ElseBranch Stmt // nil if there is no else branch
 }
-
 
 // VarStmt declares a variable, e.g. `fang x = 5;`
 type VarStmt struct {
@@ -43,7 +47,7 @@ type ExprStmt struct {
 type HissStmt struct {
 	Expression Expr
 }
-
+func (BlockStmt) stmtNode() {}
 func (IfStmt) stmtNode()  {}
 func (VarStmt) stmtNode()  {}
 func (ExprStmt) stmtNode() {}
