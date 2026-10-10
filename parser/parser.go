@@ -195,10 +195,15 @@ func (p *Parser) forStatement() (Stmt, error) {
 	var initializer Stmt
 	var err error
 	if p.match(scanner.SEMICOLON) {
+		initializer = nil
+	} else if p.match(scanner.LET) {
 		initializer, err = p.varDeclaration()
-		if err != nil {
-			return nil, err
-		}
+	} else {
+		initializer, err = p.expressionStatement()
+	}
+	if err != nil {
+		return nil, err
+		
 	}
 
 	var condition Expr
@@ -211,6 +216,7 @@ func (p *Parser) forStatement() (Stmt, error) {
 	if _, err := p.consume(scanner.SEMICOLON, "Expect ';' after loop condition"); err != nil {
 		return nil, err
 	}
+	
 	body, err := p.statement()
 	if err != nil {
 		return nil, err
