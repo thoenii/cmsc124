@@ -79,6 +79,9 @@ func (p *Parser) varDeclaration() (Stmt, error) {
 
 // statement: a hiss (print) statement, or a plain expression statement.
 func (p *Parser) statement() (Stmt, error) {
+	if p.match(scanner.FOR) {
+		return p.forStatement()
+	}
 	if p.match(scanner.IF) {
 		return p.ifStatement()
 	}
@@ -148,7 +151,7 @@ func (p *Parser) block() ([]Stmt, error) {
 	return stmts, nil
 }
 
-
+// ifStatement parses `if (condition) thenBranch else elseBranch`
 func (p *Parser) ifStatement() (Stmt, error) {
 	if _, err := p.consume(scanner.LEFT_PAREN, "Expect '(' after 'if'"); err != nil {
 		return nil, err
@@ -175,6 +178,39 @@ func (p *Parser) ifStatement() (Stmt, error) {
 		}
 	}
 	return IfStmt{Condition: condition, ThenBranch: thenBranch, ElseBranch: elseBranch}, nil
+}
+
+//forStatement parses `for (initializer; condition; increment) body`
+func (p *Parser) forStatement() (Stmt, error) {
+	if _, err := p.consume(scanner.LEFT_PAREN, "Expect '(' after 'for'"); err != nil {
+		return nil, err
+	}
+
+	//initialiazer
+	var initializer Stmt
+	var err error
+	if p.match(scanner.SEMICOLON) {
+		initializer, err = p.varDeclaration()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	var condition Expr
+	if !p.check(scanner.SEMICOLON) {
+		condition, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
+	}
+	if _, err := p.consume(scanner.SEMICOLON, "Expect ';' after loop condition"); err != nil {
+		return nil, err
+	}
+	body, err := p.statement()
+	if err != nil {
+		return nil, err
+	}
+	return ForStmt{Initializer: initializer, Condition: condition, Body: body}, nil
 }
 
 
