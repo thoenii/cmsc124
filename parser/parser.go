@@ -2,6 +2,7 @@ package parser
 
 import (
 	"cmsc124/scanner"
+	"errors"
 	"fmt"
 )
 
@@ -9,6 +10,8 @@ import (
 type Parser struct {
 	tokens  []scanner.Token
 	current int // index of the next token to read
+	errors []error // errors encountered during parsing
+	lastErrLine int
 }
 
 // NewParser creates a parser for the given tokens.
@@ -20,13 +23,19 @@ func NewParser(tokens []scanner.Token) *Parser {
 
 // ParseProgram parses statements until EOF.
 func (p *Parser) ParseProgram() ([]Stmt, error) {
+	p.errors = nil // reset errors for each parse
 	var stmts []Stmt
 	for !p.isAtEnd() {
 		stmt, err := p.declaration()
 		if err != nil {
-			return nil, err
+			p.recordError(err)
+			p.synchronize() // skip to the next statement
+			continue
 		}
 		stmts = append(stmts, stmt)
+	}
+	if len(p.errors) > 0 {
+		return nil, errors.Join(p.errors...)
 	}
 	return stmts, nil
 }
@@ -71,6 +80,22 @@ func (p *Parser) varDeclaration() (Stmt, error) {
 
 // statement: a hiss (print) statement, or a plain expression statement.
 func (p *Parser) statement() (Stmt, error) {
+	if p.match(scanner.FOR) {
+		return p.forStatement()
+	}
+	if p.match(scanner.WHILE) {
+		return p.whileStatement()
+	}
+	if p.match(scanner.IF) {
+		return p.ifStatement()
+	}
+	if p.match(scanner.LEFT_BRACE) {
+		stmts, err := p.block()
+		if err != nil {
+			return nil, err
+		}
+		return BlockStmt{Statements: stmts}, nil
+	}
 	if p.match(scanner.PRINT) {
 		return p.printStatement()
 	}
@@ -106,6 +131,130 @@ func (p *Parser) expressionStatement() (Stmt, error) {
 	}
 	return ExprStmt{Expression: expr}, nil
 }
+
+// ---------- Control flow ----------
+
+// block parses declarations up until the closing brace
+func (p *Parser) block() ([]Stmt, error) {
+	open := p.previous() 
+	var stmts []Stmt
+
+	for !p.check(scanner.RIGHT_BRACE) && !p.isAtEnd() {
+		stmt, err := p.declaration()
+		if err != nil {
+			p.recordError(err)
+			p.synchronize() // skip to the next statement
+			continue
+		}
+		stmts = append(stmts, stmt)
+	}
+
+	if !p.check(scanner.RIGHT_BRACE) {
+		return nil, &ParseError{Line: open.Line, Message: fmt.Sprintf("Expect '}' to close block opened at line %d", open.Line)}
+	}
+	p.advance()
+	return stmts, nil
+}
+
+// ifStatement parses `if (condition) thenBranch else elseBranch`
+func (p *Parser) ifStatement() (Stmt, error) {
+	if _, err := p.consume(scanner.LEFT_PAREN, "Expect '(' after 'if'"); err != nil {
+		return nil, err
+	}
+	condition, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+	if _, err := p.consume(scanner.RIGHT_PAREN, "Expect ')' after if condition"); err != nil {
+		return nil, err
+	}
+
+	thenBranch, err := p.statement()
+	if err != nil {
+		return nil, err
+	}
+
+	//else
+	var elseBranch Stmt
+	if p.match(scanner.ELSE) {
+		elseBranch, err = p.statement()
+		if err != nil {
+			return nil, err
+		}
+	}
+	return IfStmt{Condition: condition, ThenBranch: thenBranch, ElseBranch: elseBranch}, nil
+}
+
+//forStatement parses `for (initializer; condition; increment) body`
+func (p *Parser) forStatement() (Stmt, error) {
+	if _, err := p.consume(scanner.LEFT_PAREN, "Expect '(' after 'coil'"); err != nil {
+		return nil, err
+	}
+
+	//initialiazer
+	var initializer Stmt
+	var err error
+	if p.match(scanner.SEMICOLON) {
+		initializer = nil
+	} else if p.match(scanner.LET) {
+		initializer, err = p.varDeclaration()
+	} else {
+		initializer, err = p.expressionStatement()
+	}
+	if err != nil {
+		return nil, err
+		
+	}
+
+	var condition Expr
+	if !p.check(scanner.SEMICOLON) {
+		condition, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
+	}
+	if _, err := p.consume(scanner.SEMICOLON, "Expect ';' after loop condition"); err != nil {
+		return nil, err
+	}
+
+	var increment Expr 
+	if !p.check(scanner.RIGHT_PAREN) {
+		increment, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
+	}
+	if _, err := p.consume(scanner.RIGHT_PAREN, "Expect ')' after for clauses"); err != nil {
+		return nil, err
+	}
+
+	body, err := p.statement()
+	if err != nil {
+		return nil, err
+	}
+	return ForStmt{Initializer: initializer, Condition: condition, Increment: increment, Body: body}, nil
+}
+
+// whileStatement parses while condition statements
+func (p *Parser) whileStatement() (Stmt, error) {
+	if _, err := p.consume(scanner.LEFT_PAREN, "Expect '(' after 'slither'"); err != nil {
+		return nil, err
+	}
+	condition, err := p.expression()
+	if err != nil {
+		return nil, err
+	}
+	if _, err := p.consume(scanner.RIGHT_PAREN, "Expect ')' after while condition"); err != nil {
+		return nil, err
+	}
+
+	body, err := p.statement()
+	if err != nil {
+		return nil, err
+	}
+	return WhileStmt{Condition: condition, Body: body}, nil
+}
+
 
 // ---------- Expressions (lowest to highest precedence) ----------
 
@@ -259,6 +408,16 @@ func (p *Parser) primary() (Expr, error) {
 	return nil, fmt.Errorf("[line %d] Expect expression", p.peek().Line)
 }
 
+// recordError saves a syntax error, but ignores follow-up errors on the same line
+func (p *Parser) recordError(err error) {
+	line := p.peek().Line
+	if len(p.errors) > 0 && line == p.lastErrLine {
+		return
+	}
+	p.errors = append(p.errors, err)
+	p.lastErrLine = line
+}
+
 // ---------- Token helpers ----------
 
 // match consumes the current token if it is one of the given types.
@@ -302,3 +461,49 @@ func (p *Parser) previous() scanner.Token {
 func (p *Parser) isAtEnd() bool {
 	return p.peek().Type == scanner.EOF
 }
+
+// ---------- Error handling ----------
+type ParseError struct {
+	Line int
+	Message string
+}
+
+func (e *ParseError) Error() string {
+	return fmt.Sprintf("[line %d] %s", e.Line, e.Message)
+}
+
+// errorAt reports an error at the current token.
+func (p *Parser) errorAt(token scanner.Token, message string) error {
+	return &ParseError{Line: token.Line, Message: message}
+}
+
+// consume checks that the current token is of the expected type, consumes it, and returns it. If not, it reports an error.
+func (p *Parser) consume(tokenType scanner.TokenType, message string) (scanner.Token, error) {
+	if p.check(tokenType) {
+		return p.advance(), nil
+	}
+	return scanner.Token{}, p.errorAt(p.peek(), message)
+} 
+
+func (p *Parser) synchronize() {
+	p.advance()
+
+	for !p.isAtEnd() {
+		if p.previous().Type == scanner.SEMICOLON {
+			return
+		}
+	switch p.peek().Type {
+		case scanner.LET,
+		scanner.PRINT,
+		scanner.IF,
+		scanner.WHILE,
+		scanner.FOR,
+		scanner.LEFT_BRACE,
+		scanner.RIGHT_BRACE:
+			return
+		}
+		p.advance()
+
+	}
+}
+

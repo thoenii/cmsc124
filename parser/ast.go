@@ -20,6 +20,32 @@ type Stmt interface {
 
 // ---------- Statements ----------
 
+// BlockStmt is a block of statements, e.g. `{ stmt1; stmt2; }`
+type BlockStmt struct {
+	Statements []Stmt
+}
+
+// IfStmt represents an if statement
+type IfStmt struct {
+	Condition Expr
+	ThenBranch Stmt
+	ElseBranch Stmt // nil if there is no else branch
+}
+
+// ForStmt
+type ForStmt struct {
+	Initializer Stmt
+	Condition Expr
+	Increment Expr
+	Body Stmt
+}
+
+// WhileStmt
+type WhileStmt struct {
+	Condition Expr
+	Body Stmt
+}
+
 // VarStmt declares a variable, e.g. `fang x = 5;`
 type VarStmt struct {
 	Name        scanner.Token
@@ -36,6 +62,10 @@ type HissStmt struct {
 	Expression Expr
 }
 
+func (ForStmt) stmtNode() {}
+func (WhileStmt) stmtNode() {}
+func (BlockStmt) stmtNode() {}
+func (IfStmt) stmtNode()  {}
 func (VarStmt) stmtNode()  {}
 func (ExprStmt) stmtNode() {}
 func (HissStmt) stmtNode() {}
@@ -99,6 +129,36 @@ func PrintStmt(stmt Stmt) string {
 
 	case HissStmt:
 		return "(print " + PrintExpr(s.Expression) + ")"
+
+	case BlockStmt:
+		out := "(block"
+		for _, inner := range s.Statements {
+			out += " " + PrintStmt(inner)
+		}
+		return out + ")"
+
+	case IfStmt:
+		out := "(if" + PrintExpr(s.Condition) + " " + PrintStmt(s.ThenBranch)
+		if s.ElseBranch != nil {
+			out += " " + PrintStmt(s.ElseBranch)
+		}
+		return out + ")"
+
+	case WhileStmt:
+		return "(slither" + PrintExpr(s.Condition) + " " + PrintStmt(s.Body) + ")"
+	
+	case ForStmt:
+		init, cond, incr := "_", "_", "_"
+		if s.Initializer != nil {
+			init = PrintStmt(s.Initializer)
+		}
+		if s.Condition != nil {
+			cond = PrintExpr(s.Condition)
+		}
+		if s.Increment != nil {
+			incr = PrintExpr(s.Increment)
+		}
+		return "(coil" + init + " " + cond + " " + incr + " " + PrintStmt(s.Body) + ")"
 
 	default:
 		return ""
