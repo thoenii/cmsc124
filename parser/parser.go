@@ -148,9 +148,10 @@ func (p *Parser) block() ([]Stmt, error) {
 		stmts = append(stmts, stmt)
 	}
 
-	if _, err := p.consume(scanner.RIGHT_BRACE, fmt.Sprintf("Expect '}' to close block opened at line %d", open.Line)); err != nil {
-		return nil, err
+	if !p.check(scanner.RIGHT_BRACE) {
+		return nil, &ParseError{Line: open.Line, Message: fmt.Sprintf("Expect '}' to close block opened at line %d", open.Line)}
 	}
+	p.advance()
 	return stmts, nil
 }
 
