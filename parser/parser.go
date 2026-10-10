@@ -216,12 +216,23 @@ func (p *Parser) forStatement() (Stmt, error) {
 	if _, err := p.consume(scanner.SEMICOLON, "Expect ';' after loop condition"); err != nil {
 		return nil, err
 	}
-	
+
+	var increment Expr 
+	if !p.check(scanner.RIGHT_PAREN) {
+		increment, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
+	}
+	if _, err := p.consume(scanner.RIGHT_PAREN, "Expect ')' after for clauses"); err != nil {
+		return nil, err
+	}
+
 	body, err := p.statement()
 	if err != nil {
 		return nil, err
 	}
-	return ForStmt{Initializer: initializer, Condition: condition, Body: body}, nil
+	return ForStmt{Initializer: initializer, Condition: condition, Increment: increment, Body: body}, nil
 }
 
 // whileStatement parses while condition statements
@@ -484,6 +495,9 @@ func (p *Parser) synchronize() {
 	switch p.peek().Type {
 		case scanner.LET,
 		scanner.PRINT,
+		scanner.IF,
+		scanner.WHILE,
+		scanner.FOR,
 		scanner.LEFT_BRACE,
 		scanner.RIGHT_BRACE:
 			return

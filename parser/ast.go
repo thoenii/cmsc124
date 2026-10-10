@@ -36,6 +36,7 @@ type IfStmt struct {
 type ForStmt struct {
 	Initializer Stmt
 	Condition Expr
+	Increment Expr
 	Body Stmt
 }
 
@@ -147,14 +148,17 @@ func PrintStmt(stmt Stmt) string {
 		return "(slither" + PrintExpr(s.Condition) + " " + PrintStmt(s.Body) + ")"
 	
 	case ForStmt:
-		init, cond := "_", "_"
+		init, cond, incr := "_", "_", "_"
 		if s.Initializer != nil {
 			init = PrintStmt(s.Initializer)
 		}
 		if s.Condition != nil {
 			cond = PrintExpr(s.Condition)
 		}
-		return "(coil" + init + " " + cond + " " + PrintStmt(s.Body) + ")"
+		if s.Increment != nil {
+			incr = PrintExpr(s.Increment)
+		}
+		return "(coil" + init + " " + cond + " " + incr + " " + PrintStmt(s.Body) + ")"
 
 	default:
 		return ""
