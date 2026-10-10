@@ -20,6 +20,14 @@ type Stmt interface {
 
 // ---------- Statements ----------
 
+// IfStmt represents an if statement
+type IfStmt struct {
+	Condition Expr
+	ThenBranch Stmt
+	ElseBranch Stmt // nil if there is no else branch
+}
+
+
 // VarStmt declares a variable, e.g. `fang x = 5;`
 type VarStmt struct {
 	Name        scanner.Token
@@ -36,6 +44,7 @@ type HissStmt struct {
 	Expression Expr
 }
 
+func (IfStmt) stmtNode()  {}
 func (VarStmt) stmtNode()  {}
 func (ExprStmt) stmtNode() {}
 func (HissStmt) stmtNode() {}
