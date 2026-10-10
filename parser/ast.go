@@ -129,6 +129,33 @@ func PrintStmt(stmt Stmt) string {
 	case HissStmt:
 		return "(print " + PrintExpr(s.Expression) + ")"
 
+	case BlockStmt:
+		out := "(block"
+		for _, inner := range s.Statements {
+			out += " " + PrintStmt(inner)
+		}
+		return out + ")"
+
+	case IfStmt:
+		out := "(if" + PrintExpr(s.Condition) + " " + PrintStmt(s.ThenBranch)
+		if s.ElseBranch != nil {
+			out += " " + PrintStmt(s.ElseBranch)
+		}
+		return out + ")"
+
+	case WhileStmt:
+		return "(while" + PrintExpr(s.Condition) + " " + PrintStmt(s.Body) + ")"
+	
+	case ForStmt:
+		init, cond := "_", "_"
+		if s.Initializer != nil {
+			init = PrintStmt(s.Initializer)
+		}
+		if s.Condition != nil {
+			cond = PrintExpr(s.Condition)
+		}
+		return "(for" + init + " " + cond + " " + PrintStmt(s.Body) + ")"
+
 	default:
 		return ""
 	}
