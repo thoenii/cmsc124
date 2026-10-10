@@ -11,6 +11,7 @@ type Parser struct {
 	tokens  []scanner.Token
 	current int // index of the next token to read
 	errors []error // errors encountered during parsing
+	lastErrLine int
 }
 
 // NewParser creates a parser for the given tokens.
@@ -27,7 +28,7 @@ func (p *Parser) ParseProgram() ([]Stmt, error) {
 	for !p.isAtEnd() {
 		stmt, err := p.declaration()
 		if err != nil {
-			p.errors = append(p.errors, err)
+			p.recordError(err)
 			p.synchronize() // skip to the next statement
 			continue
 		}
@@ -141,7 +142,7 @@ func (p *Parser) block() ([]Stmt, error) {
 	for !p.check(scanner.RIGHT_BRACE) && !p.isAtEnd() {
 		stmt, err := p.declaration()
 		if err != nil {
-			p.errors = append(p.errors, err)
+			p.recordError(err)
 			p.synchronize() // skip to the next statement
 			continue
 		}
@@ -186,7 +187,7 @@ func (p *Parser) ifStatement() (Stmt, error) {
 
 //forStatement parses `for (initializer; condition; increment) body`
 func (p *Parser) forStatement() (Stmt, error) {
-	if _, err := p.consume(scanner.LEFT_PAREN, "Expect '(' after 'for'"); err != nil {
+	if _, err := p.consume(scanner.LEFT_PAREN, "Expect '(' after 'coil'"); err != nil {
 		return nil, err
 	}
 
@@ -219,7 +220,7 @@ func (p *Parser) forStatement() (Stmt, error) {
 
 // whileStatement parses while condition statements
 func (p *Parser) whileStatement() (Stmt, error) {
-	if _, err := p.consume(scanner.LEFT_PAREN, "Expect '(' after 'while'"); err != nil {
+	if _, err := p.consume(scanner.LEFT_PAREN, "Expect '(' after 'slither'"); err != nil {
 		return nil, err
 	}
 	condition, err := p.expression()
@@ -388,6 +389,16 @@ func (p *Parser) primary() (Expr, error) {
 	}
 
 	return nil, fmt.Errorf("[line %d] Expect expression", p.peek().Line)
+}
+
+// recordError saves a syntax error, but ignores follow-up errors on the same line
+func (p *Parser) recordError(err error) {
+	line := p.peek().Line
+	if len(p.errors) > 0 && line == p.lastErrLine {
+		return
+	}
+	p.errors = append(p.errors, err)
+	p.lastErrLine = line
 }
 
 // ---------- Token helpers ----------
