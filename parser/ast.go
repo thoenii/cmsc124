@@ -144,7 +144,7 @@ func PrintStmt(stmt Stmt) string {
 		return out + ")"
 
 	case WhileStmt:
-		return "(while" + PrintExpr(s.Condition) + " " + PrintStmt(s.Body) + ")"
+		return "(slither" + PrintExpr(s.Condition) + " " + PrintStmt(s.Body) + ")"
 	
 	case ForStmt:
 		init, cond := "_", "_"
@@ -154,7 +154,7 @@ func PrintStmt(stmt Stmt) string {
 		if s.Condition != nil {
 			cond = PrintExpr(s.Condition)
 		}
-		return "(for" + init + " " + cond + " " + PrintStmt(s.Body) + ")"
+		return "(coil" + init + " " + cond + " " + PrintStmt(s.Body) + ")"
 
 	default:
 		return ""
