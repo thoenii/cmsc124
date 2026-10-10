@@ -32,6 +32,13 @@ type IfStmt struct {
 	ElseBranch Stmt // nil if there is no else branch
 }
 
+// ForStmt
+type ForStmt struct {
+	Initializer Stmt
+	Condition Expr
+	Body Stmt
+}
+
 // VarStmt declares a variable, e.g. `fang x = 5;`
 type VarStmt struct {
 	Name        scanner.Token
@@ -47,6 +54,7 @@ type ExprStmt struct {
 type HissStmt struct {
 	Expression Expr
 }
+func (ForStmt) stmtNode() {}
 func (BlockStmt) stmtNode() {}
 func (IfStmt) stmtNode()  {}
 func (VarStmt) stmtNode()  {}
