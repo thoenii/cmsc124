@@ -138,14 +138,14 @@ func PrintStmt(stmt Stmt) string {
 		return out + ")"
 
 	case IfStmt:
-		out := "(if" + PrintExpr(s.Condition) + " " + PrintStmt(s.ThenBranch)
+		out := "(if " + PrintExpr(s.Condition) + " " + PrintStmt(s.ThenBranch)
 		if s.ElseBranch != nil {
 			out += " " + PrintStmt(s.ElseBranch)
 		}
 		return out + ")"
 
 	case WhileStmt:
-		return "(slither" + PrintExpr(s.Condition) + " " + PrintStmt(s.Body) + ")"
+		return "(slither " + PrintExpr(s.Condition) + " " + PrintStmt(s.Body) + ")"
 	
 	case ForStmt:
 		init, cond, incr := "_", "_", "_"
@@ -158,7 +158,7 @@ func PrintStmt(stmt Stmt) string {
 		if s.Increment != nil {
 			incr = PrintExpr(s.Increment)
 		}
-		return "(coil" + init + " " + cond + " " + incr + " " + PrintStmt(s.Body) + ")"
+		return "(coil " + init + " " + cond + " " + incr + " " + PrintStmt(s.Body) + ")"
 
 	default:
 		return ""
