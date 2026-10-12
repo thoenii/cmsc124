@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"cmsc124/evaluator"
 	"cmsc124/parser"
 	"cmsc124/scanner"
 	"fmt"
@@ -23,6 +24,9 @@ func main() {
 	case len(args) == 2 && args[0] == "--parse":
 		// for parsing
 		runParseFile(args[1])
+
+	case len(args) == 2 && args[0] == "--eval":
+		runEvalFile(args[1])
 
 	case len(args) == 1:
 		// bare "./run <path>": preserve Lab 0's original contract unchanged,
@@ -60,7 +64,7 @@ func runFile(path string) {
 	}
 
 	// only exit 65 once the whole file has been scanned, per the "keep
-	// scanning after an error" contract — never bail out mid-scan
+	// scanning after an error" contract - never bail out mid-scan
 	if sc.HadError() {
 		os.Exit(65)
 	}
@@ -127,4 +131,44 @@ func runRepl() {
 			fmt.Printf("Token(type=%s, lexeme=%s, literal=%v, line=%d)\n", tok.Type, tok.Lexeme, literal, tok.Line)
 		}
 	}
+}
+
+// runEvalFile scans, parses, then evaluates each expression statement and
+// prints its value. Static errors exit 65; runtime errors exit 70.
+func runEvalFile(path string) {
+	source, err := os.ReadFile(path)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Could not read file %q: %v\n", path, err)
+		os.Exit(64)
+	}
+
+	sc := scanner.NewScanner(string(source))
+	tokens := sc.ScanTokens()
+	if sc.HadError() {
+		os.Exit(65)
+	}
+
+	p := parser.NewParser(tokens)
+	stmts, err := p.ParseProgram()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(65)
+	}
+
+	for _, stmt := range stmts {
+		// Only expression statements are evaluated for now.
+		// Other statement kinds (hiss, fang, blocks...) are Lab 4.
+		es, ok := stmt.(parser.ExprStmt)
+		if !ok {
+			continue
+		}
+
+		val, err := evaluator.Evaluate(es.Expression)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(70)
+		}
+		fmt.Println(evaluator.Stringify(val))
+	}
+	os.Exit(0)
 }
