@@ -273,6 +273,12 @@ func (s *Scanner) scanToken() {
 		} else {
 			s.addToken(SLASH)
 		}
+	case '!':
+		if s.match('=') {
+			s.addToken(BANG_EQUAL)
+		} else {
+			s.addToken(BANG)
+		}
 	case '=':
 		if s.match('=') {
 			s.addToken(EQUAL_EQUAL)
