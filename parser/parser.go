@@ -385,8 +385,16 @@ func (p *Parser) unary() (Expr, error) {
 
 // primary handles literals, variables, and grouped expressions
 func (p *Parser) primary() (Expr, error) {
-	if p.match(scanner.NUMBER, scanner.STRING, scanner.TRUE, scanner.FALSE, scanner.NONE) {
+	if p.match(scanner.NUMBER, scanner.STRING, scanner.NONE) {
 		return LiteralExpr{Value: p.previous().Literal}, nil
+	}
+
+	if p.match(scanner.TRUE) {
+    	return LiteralExpr{Value: true}, nil
+	}
+
+	if p.match(scanner.FALSE) {
+    	return LiteralExpr{Value: false}, nil
 	}
 
 	if p.match(scanner.IDENTIFIER) {
