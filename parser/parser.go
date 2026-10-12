@@ -8,9 +8,9 @@ import (
 
 // Parser turns a list of tokens into AST nodes (recursive descent).
 type Parser struct {
-	tokens  []scanner.Token
-	current int // index of the next token to read
-	errors []error // errors encountered during parsing
+	tokens      []scanner.Token
+	current     int     // index of the next token to read
+	errors      []error // errors encountered during parsing
 	lastErrLine int
 }
 
@@ -40,11 +40,6 @@ func (p *Parser) ParseProgram() ([]Stmt, error) {
 	return stmts, nil
 }
 
-// Parse parses a single expression.
-func (p *Parser) Parse() (Expr, error) {
-	return p.expression()
-}
-
 // ---------- Statements ----------
 
 // declaration: a fang (variable) declaration, or any other statement.
@@ -55,7 +50,7 @@ func (p *Parser) declaration() (Stmt, error) {
 	return p.statement()
 }
 
-// varDeclaration parses `fang name;` or `fang name = expr;`
+// varDeclaration parses 'fang name;' or 'fang name = expr;'
 func (p *Parser) varDeclaration() (Stmt, error) {
 	if !p.check(scanner.IDENTIFIER) {
 		return nil, fmt.Errorf("[line %d] Expect variable name", p.peek().Line)
@@ -102,7 +97,7 @@ func (p *Parser) statement() (Stmt, error) {
 	return p.expressionStatement()
 }
 
-// printStatement parses `hiss(expr);`
+// printStatement parses 'hiss(expr);'
 func (p *Parser) printStatement() (Stmt, error) {
 	if !p.match(scanner.LEFT_PAREN) {
 		return nil, fmt.Errorf("[line %d] Expect '(' after hiss", p.peek().Line)
@@ -136,7 +131,7 @@ func (p *Parser) expressionStatement() (Stmt, error) {
 
 // block parses declarations up until the closing brace
 func (p *Parser) block() ([]Stmt, error) {
-	open := p.previous() 
+	open := p.previous()
 	var stmts []Stmt
 
 	for !p.check(scanner.RIGHT_BRACE) && !p.isAtEnd() {
@@ -185,7 +180,7 @@ func (p *Parser) ifStatement() (Stmt, error) {
 	return IfStmt{Condition: condition, ThenBranch: thenBranch, ElseBranch: elseBranch}, nil
 }
 
-//forStatement parses `for (initializer; condition; increment) body`
+// forStatement parses `for (initializer; condition; increment) body`
 func (p *Parser) forStatement() (Stmt, error) {
 	if _, err := p.consume(scanner.LEFT_PAREN, "Expect '(' after 'coil'"); err != nil {
 		return nil, err
@@ -203,7 +198,7 @@ func (p *Parser) forStatement() (Stmt, error) {
 	}
 	if err != nil {
 		return nil, err
-		
+
 	}
 
 	var condition Expr
@@ -217,7 +212,7 @@ func (p *Parser) forStatement() (Stmt, error) {
 		return nil, err
 	}
 
-	var increment Expr 
+	var increment Expr
 	if !p.check(scanner.RIGHT_PAREN) {
 		increment, err = p.expression()
 		if err != nil {
@@ -254,7 +249,6 @@ func (p *Parser) whileStatement() (Stmt, error) {
 	}
 	return WhileStmt{Condition: condition, Body: body}, nil
 }
-
 
 // ---------- Expressions (lowest to highest precedence) ----------
 
@@ -472,7 +466,7 @@ func (p *Parser) isAtEnd() bool {
 
 // ---------- Error handling ----------
 type ParseError struct {
-	Line int
+	Line    int
 	Message string
 }
 
@@ -491,7 +485,7 @@ func (p *Parser) consume(tokenType scanner.TokenType, message string) (scanner.T
 		return p.advance(), nil
 	}
 	return scanner.Token{}, p.errorAt(p.peek(), message)
-} 
+}
 
 func (p *Parser) synchronize() {
 	p.advance()
@@ -500,18 +494,17 @@ func (p *Parser) synchronize() {
 		if p.previous().Type == scanner.SEMICOLON {
 			return
 		}
-	switch p.peek().Type {
+		switch p.peek().Type {
 		case scanner.LET,
-		scanner.PRINT,
-		scanner.IF,
-		scanner.WHILE,
-		scanner.FOR,
-		scanner.LEFT_BRACE,
-		scanner.RIGHT_BRACE:
+			scanner.PRINT,
+			scanner.IF,
+			scanner.WHILE,
+			scanner.FOR,
+			scanner.LEFT_BRACE,
+			scanner.RIGHT_BRACE:
 			return
 		}
 		p.advance()
 
 	}
 }
-
