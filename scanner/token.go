@@ -20,6 +20,7 @@ const (
 
 	EQUAL         TokenType = "EQUAL"
 	EQUAL_EQUAL   TokenType = "EQUAL_EQUAL"
+	BANG          TokenType = "BANG"
 	BANG_EQUAL    TokenType = "BANG_EQUAL"
 	LESS_EQUAL    TokenType = "LESS_EQUAL"
 	GREATER_EQUAL TokenType = "GREATER_EQUAL"
