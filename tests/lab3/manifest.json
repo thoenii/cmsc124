@@ -1,5 +1,5 @@
 {
-  "ext": ".mylang",
+  "ext": ".viper",
   "flag": "--eval",
   "mode": "inline",
   "comment_prefix": "//"
