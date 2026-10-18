@@ -2,7 +2,6 @@ package evaluator
 
 import (
 	"cmsc124/parser"
-	"cmsc124/scanner"
 	"fmt"
 )
 
@@ -12,22 +11,6 @@ func Evaluate(expr parser.Expr) (Value, error) {
 		return e.Value, nil
 	case parser.GroupingExpr:
 		return Evaluate(e.Expression)
-	case parser.UnaryExpr:
-		right, err := Evaluate(e.Right)
-		if err != nil {
-			return nil, err
-		}
-		return unaryOp(e.Operator, right)
-	case parser.BinaryExpr:
-		left, err := Evaluate(e.Left)
-		if err != nil {
-			return nil, err
-		}
-		right, err := Evaluate(e.Right)
-		if err != nil {
-			return nil, err
-		}
-		return binaryOp(e.Operator, left, right)
 	default:
 		return nil, fmt.Errorf("not implemented yet")
 	}

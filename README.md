@@ -26,7 +26,22 @@ Viper is a small, dynamically typed programming language designed as an educatio
 | `./run --eval <file>` | Evaluates each expression and prints its value. Available from Lab 3. |
 | `./run` | Starts the REPL. |
 
-Exit codes: 0 for successful execution, 65 for static errors (lexical or syntax errors), and 70 for runtime errors.
+Usage:
+
+​```
+./run [--tokenize | --parse | --eval] <file>
+​```
+
+Exactly one flag and one file path are accepted. Any other combination prints the usage message to stderr and exits with code 64.
+
+Exit codes:
+
+| Code | Meaning |
+|---|---|
+| 0 | accepted, or executed successfully |
+| 64 | bad usage, or the file could not be read |
+| 65 | static error (lexical or syntax error) |
+| 70 | runtime error |
 
 ## File extension
 
@@ -68,6 +83,8 @@ Precedence is listed from lowest (1) to highest (6).
 | * | arithmetic | binary | left | 5 |
 | / | arithmetic | binary | left | 5 |
 | - (negation) | arithmetic | unary | right | 6 |
+
+Viper has no increment operator. Use `x = x + 1`.
 
 ### Literals
 
@@ -139,8 +156,8 @@ Only NUMBER and STRING tokens carry a literal value. Every other token, includin
 Token types:
 
 - Grouping and punctuation: LEFT_PAREN, RIGHT_PAREN, LEFT_BRACE, RIGHT_BRACE, SEMICOLON
-- Arithmetic operators: PLUS, MINUS, STAR, SLASH, PLUS_PLUS
-- Assignment and comparison: EQUAL, EQUAL_EQUAL, BANG_EQUAL, LESS, LESS_EQUAL, GREATER, GREATER_EQUAL
+- Arithmetic operators: PLUS, MINUS, STAR, SLASH
+- - Assignment and comparison: EQUAL, EQUAL_EQUAL, BANG, BANG_EQUAL, LESS, LESS_EQUAL, GREATER, GREATER_EQUAL
 - Literals and identifiers: IDENTIFIER, STRING, NUMBER
 - Keywords: LET, PRINT, IF, ELSE, FOR, WHILE, TRUE, FALSE, NONE
 - End marker: EOF
@@ -155,11 +172,23 @@ program        → declaration* EOF ;
 declaration    → varDecl | statement ;
 varDecl        → "fang" IDENTIFIER ( "=" expression )? ";" ;
 
-statement      → forStmt | whileStmt | ifStmt | block | printStmt | exprStmt ;
-forStmt        → "coil" "(" ( varDecl | exprStmt | ";" )
-                 expression? ";" expression? ")" statement ;
-whileStmt      → "slither" "(" expression ")" statement ;
-ifStmt         → "if" "(" expression ")" statement ( "else" statement )? ;
+statement      → matched | unmatched ;
+
+matched        → "if" "(" expression ")" matched "else" matched
+               | forHead matched
+               | whileHead matched
+               | block
+               | printStmt
+               | exprStmt ;
+
+unmatched      → "if" "(" expression ")" statement
+               | "if" "(" expression ")" matched "else" unmatched
+               | forHead unmatched
+               | whileHead unmatched ;
+
+forHead        → "coil" "(" ( varDecl | exprStmt | ";" )
+                 expression? ";" expression? ")" ;
+whileHead      → "slither" "(" expression ")" ;
 block          → "{" declaration* "}" ;
 printStmt      → "hiss" "(" expression ")" ";" ;
 exprStmt       → expression ";" ;
@@ -170,10 +199,15 @@ equality       → comparison ( ( "==" | "!=" ) comparison )* ;
 comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
 term           → factor ( ( "+" | "-" ) factor )* ;
 factor         → unary ( ( "*" | "/" ) unary )* ;
-unary          → "-" unary | primary ;
+unary          → ( "!" | "-" ) unary | primary ;
 primary        → NUMBER | STRING | "true" | "false" | "dead"
                | IDENTIFIER | "(" expression ")" ;
 ```
+
+> **Note on `statement`:** the `matched` / `unmatched` split removes the dangling
+> else ambiguity. An `else` can only follow a then-branch that is itself matched,
+> so it always attaches to the nearest preceding `if` that has no `else`. The
+> parser implements this by consuming `else` as soon as a then-branch ends.
 
 ## Parse output format
 
@@ -181,9 +215,13 @@ primary        → NUMBER | STRING | "true" | "false" | "dead"
 (+ 1.0 (* 2.0 3.0))
 ```
 
-This is the `--parse` output for `1 + 2 * 3;`. Each statement prints on its own line.
+This is the `--parse` output for `1 + 2 * 3;`.
 
-- Numbers print as: always one decimal place (`2` prints as `2.0`)
+The parser returns a single `Program` root holding all top-level statements. `--parse` prints exactly one line per top-level statement, in source order. Nested statements (inside a block, `if`, `slither`, or `coil`) print inline within their parent's line. An empty program prints nothing and exits 0.
+
+An expression statement prints as just its expression, with no wrapper and no trailing `;`. For example, `1 + 2;` prints as `(+ 1.0 2.0)`, while `hiss(1 + 2);` prints as `(print (+ 1.0 2.0))`.
+
+- Numbers print as: at least one decimal place (`2` prints as `2.0`, `3.14` prints as `3.14`)
 - Strings print as: their contents, without quotes
 - Booleans print as: `true` / `false`
 - Nil (`dead`) prints as: `nil`
@@ -192,6 +230,7 @@ This is the `--parse` output for `1 + 2 * 3;`. Each statement prints on its own 
 - Binary expressions print as: `(<op> <left> <right>)`
 - Assignments print as: `(= <name> <value>)`
 - Statements print as: `(var <name> <init>)`, `(print <expr>)`, `(block ...)`, `(if ...)`, `(slither ...)`, `(coil ...)`
+- Expression statements print as: `<expr>` (no wrapper)
 
 ## Semantics
 
@@ -238,16 +277,25 @@ Message format:
 
 ```
 [line 1] Error: Unexpected character '@'
-[line 1] Expect ')' after expression
+[line 1] Error at end: Expect ')' after expression.
+[line 1] Error at ';': Expect expression.
 ```
 
-The first is a lexical error from the scanner, the second a syntax error from the parser. Runtime error format will be added in Lab 3.
+The first is a lexical error from the scanner. The others are syntax errors from the parser, which name the offending token (or `end` at end of file). Runtime error format will be added in Lab 3.
 
 | Failure | Exit code |
 |---|---|
 | lexical error | 65 |
 | syntax error | 65 |
 | runtime error | 70 |
+
+### Syntax error behavior
+
+When the parser rejects a file, it reports every error to stderr and prints nothing to stdout, so a rejected file produces no partial parse output. The process exits with code 65.
+
+The parser does not stop at the first error. After a syntax error it skips tokens until it reaches a likely statement boundary (just after a `;`, or just before a statement keyword such as `fang`, `hiss`, `if`, `slither`, `coil`, or a brace) and resumes there, so one file can report several errors. To avoid cascading noise, a follow-up error on the same line as the previous reported error is suppressed.
+
+If the scanner reports a lexical error, the file is rejected before parsing starts, and the same stdout and exit code rules apply.
 
 ## Testing conventions
 
@@ -265,6 +313,7 @@ Run locally with:
 curl -sSL https://raw.githubusercontent.com/WhiteLicorice/cmsc-124-harness/v1.1/run_tests.py -o run_tests.py
 ./build.sh
 python3 run_tests.py tests/lab1
+python3 run_tests.py tests/lab2
 ```
 
 ## Sample code
@@ -287,7 +336,6 @@ The language was designed to be dynamically typed and intentionally small enough
 
 ## Known limitations
 
-- `++` is scanned but not yet parsed.
 - Evaluation is implemented from Lab 3; statements are executed from Lab 4.
 - Functions arrive in Lab 5.
 
@@ -297,4 +345,5 @@ The language was designed to be dynamically typed and intentionally small enough
 |---|---|
 | Lab 1 | Defined the language identity, file format, lexical structure, token vocabulary, comments, whitespace rules, numeric literal rules, string rules, scanner errors, and token output format. |
 | Lab 1 (theme and loops) | Reskinned keyword lexemes to a viper theme (fang, hiss, coil, dead). Added the WHILE token and slither keyword for while-style loops. Added the PLUS_PLUS token for the ++ operator. Implemented translation of string escape sequences (\n, \", \\), with a scan error for any unsupported escape. |
-| Lab 2 | Defined the grammar and operator precedence (assignment, equality, comparison, term, factor, unary). Added variable declarations, `hiss(...)` printing, blocks, if/else, `slither` and `coil` loops. Defined the `--parse` output format. |
+| Lab 2 | Defined the grammar and operator precedence (assignment, equality, comparison, term, factor, unary). Added variable declarations, `hiss(...)` printing, blocks, if/else, `slither` and `coil` loops. Defined the `--parse` output format. The parser now returns a single `Program` root node. |
+| Lab 2 | Defined the grammar and operator precedence (assignment, equality, comparison, term, factor, unary). Added variable declarations, `hiss(...)` printing, blocks, if/else, `slither` and `coil` loops. Defined the `--parse` output format. The parser now returns a single `Program` root node. Removed the `++` operator and the `PLUS_PLUS` token; `++` now scans as two `PLUS` tokens. |
