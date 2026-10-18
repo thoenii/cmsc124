@@ -1,0 +1,1 @@
+!dead; // expect: true
