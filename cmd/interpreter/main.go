@@ -157,21 +157,19 @@ func runEvalFile(path string) {
 	}
 
 	for _, stmt := range prog.Statements {
-		{
-			// Only expression statements are evaluated for now.
-			// Other statement kinds (hiss, fang, blocks...) are Lab 4.
-			es, ok := stmt.(parser.ExprStmt)
-			if !ok {
-				continue
-			}
-
-			val, err := evaluator.Evaluate(es.Expression)
-			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
-				os.Exit(70)
-			}
-			fmt.Println(evaluator.Stringify(val))
+		// Only expression statements are evaluated for now.
+		// Other statement kinds (hiss, fang, blocks...) are Lab 4.
+		es, ok := stmt.(parser.ExprStmt)
+		if !ok {
+			continue
 		}
-		os.Exit(0)
+
+		val, err := evaluator.Evaluate(es.Expression)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(70)
+		}
+		fmt.Println(evaluator.Stringify(val))
 	}
+	os.Exit(0)
 }
