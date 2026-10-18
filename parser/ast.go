@@ -4,7 +4,13 @@ import (
 	"cmsc124/scanner"
 	"fmt"
 	"strconv"
+	"strings"
 )
+
+// Program is the root of the AST: one node holding every top-level statement.
+type Program struct {
+	Statements []Stmt
+}
 
 // ---------- Interfaces ----------
 
@@ -27,7 +33,7 @@ type BlockStmt struct {
 
 // IfStmt represents an if statement
 type IfStmt struct {
-	Condition Expr
+	Condition  Expr
 	ThenBranch Stmt
 	ElseBranch Stmt // nil if there is no else branch
 }
@@ -35,15 +41,15 @@ type IfStmt struct {
 // ForStmt
 type ForStmt struct {
 	Initializer Stmt
-	Condition Expr
-	Increment Expr
-	Body Stmt
+	Condition   Expr
+	Increment   Expr
+	Body        Stmt
 }
 
 // WhileStmt
 type WhileStmt struct {
 	Condition Expr
-	Body Stmt
+	Body      Stmt
 }
 
 // VarStmt declares a variable, e.g. `fang x = 5;`
@@ -62,13 +68,13 @@ type HissStmt struct {
 	Expression Expr
 }
 
-func (ForStmt) stmtNode() {}
+func (ForStmt) stmtNode()   {}
 func (WhileStmt) stmtNode() {}
 func (BlockStmt) stmtNode() {}
-func (IfStmt) stmtNode()  {}
-func (VarStmt) stmtNode()  {}
-func (ExprStmt) stmtNode() {}
-func (HissStmt) stmtNode() {}
+func (IfStmt) stmtNode()    {}
+func (VarStmt) stmtNode()   {}
+func (ExprStmt) stmtNode()  {}
+func (HissStmt) stmtNode()  {}
 
 // ---------- Expressions ----------
 
@@ -115,6 +121,16 @@ func (AssignExpr) exprNode()   {}
 
 // ---------- Printing ----------
 
+// PrintProgram prints one line per top-level statement, so the --parse
+// output format (and every tests/lab2 .expected file) stays unchanged.
+func PrintProgram(prog Program) string {
+	lines := make([]string, 0, len(prog.Statements))
+	for _, s := range prog.Statements {
+		lines = append(lines, PrintStmt(s))
+	}
+	return strings.Join(lines, "\n")
+}
+
 // PrintStmt converts a statement into its string representation.
 func PrintStmt(stmt Stmt) string {
 	switch s := stmt.(type) {
@@ -146,7 +162,7 @@ func PrintStmt(stmt Stmt) string {
 
 	case WhileStmt:
 		return "(slither " + PrintExpr(s.Condition) + " " + PrintStmt(s.Body) + ")"
-	
+
 	case ForStmt:
 		init, cond, incr := "_", "_", "_"
 		if s.Initializer != nil {
@@ -199,7 +215,11 @@ func printLiteral(value interface{}) string {
 	case nil:
 		return "nil"
 	case float64:
-		return strconv.FormatFloat(v, 'f', 1, 64) // always one decimal, e.g. 5.0
+		s := strconv.FormatFloat(v, 'f', -1, 64) // shortest exact form
+		if !strings.Contains(s, ".") {
+			s += ".0" // 2 -> 2.0, but 3.14 stays 3.14
+		}
+		return s
 	case string:
 		return v
 	default:
