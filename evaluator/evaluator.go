@@ -2,6 +2,7 @@ package evaluator
 
 import (
 	"cmsc124/parser"
+	"cmsc124/scanner"
 	"fmt"
 )
 
