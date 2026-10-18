@@ -9,11 +9,10 @@ const (
 	RIGHT_BRACE TokenType = "RIGHT_BRACE"
 	SEMICOLON   TokenType = "SEMICOLON"
 
-	PLUS      TokenType = "PLUS"
-	MINUS     TokenType = "MINUS"
-	STAR      TokenType = "STAR"
-	SLASH     TokenType = "SLASH"
-	PLUS_PLUS TokenType = "PLUS_PLUS"
+	PLUS  TokenType = "PLUS"
+	MINUS TokenType = "MINUS"
+	STAR  TokenType = "STAR"
+	SLASH TokenType = "SLASH"
 
 	LESS    TokenType = "LESS"
 	GREATER TokenType = "GREATER"

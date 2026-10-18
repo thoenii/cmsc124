@@ -21,23 +21,23 @@ func NewParser(tokens []scanner.Token) *Parser {
 
 // ---------- Entry points ----------
 
-// ParseProgram parses statements until EOF.
-func (p *Parser) ParseProgram() ([]Stmt, error) {
-	p.errors = nil // reset errors for each parse
+// ParseProgram parses statements until EOF and returns the root of the tree.
+func (p *Parser) ParseProgram() (Program, error) {
+	p.errors = nil
 	var stmts []Stmt
 	for !p.isAtEnd() {
 		stmt, err := p.declaration()
 		if err != nil {
 			p.recordError(err)
-			p.synchronize() // skip to the next statement
+			p.synchronize()
 			continue
 		}
 		stmts = append(stmts, stmt)
 	}
 	if len(p.errors) > 0 {
-		return nil, errors.Join(p.errors...)
+		return Program{}, errors.Join(p.errors...)
 	}
-	return stmts, nil
+	return Program{Statements: stmts}, nil
 }
 
 // ---------- Statements ----------
@@ -361,9 +361,9 @@ func (p *Parser) factor() (Expr, error) {
 	return expr, nil
 }
 
-// unary handles a leading minus, e.g. -x or --x
+// unary handles a leading minus and !
 func (p *Parser) unary() (Expr, error) {
-	if p.match(scanner.MINUS) {
+	if p.match(scanner.BANG, scanner.MINUS) {
 		operator := p.previous()
 
 		right, err := p.unary()
@@ -384,11 +384,11 @@ func (p *Parser) primary() (Expr, error) {
 	}
 
 	if p.match(scanner.TRUE) {
-    	return LiteralExpr{Value: true}, nil
+		return LiteralExpr{Value: true}, nil
 	}
 
 	if p.match(scanner.FALSE) {
-    	return LiteralExpr{Value: false}, nil
+		return LiteralExpr{Value: false}, nil
 	}
 
 	if p.match(scanner.IDENTIFIER) {
@@ -467,16 +467,21 @@ func (p *Parser) isAtEnd() bool {
 // ---------- Error handling ----------
 type ParseError struct {
 	Line    int
+	Where   string // "end" or the quoted lexeme, e.g. 'this'
 	Message string
 }
 
 func (e *ParseError) Error() string {
-	return fmt.Sprintf("[line %d] %s", e.Line, e.Message)
+	return fmt.Sprintf("[line %d] Error at %s: %s.", e.Line, e.Where, e.Message)
 }
 
-// errorAt reports an error at the current token.
+// errorAt builds a syntax error located at the given token.
 func (p *Parser) errorAt(token scanner.Token, message string) error {
-	return &ParseError{Line: token.Line, Message: message}
+	where := "'" + string(token.Lexeme) + "'"
+	if token.Type == scanner.EOF {
+		where = "end"
+	}
+	return &ParseError{Line: token.Line, Where: where, Message: message}
 }
 
 // consume checks that the current token is of the expected type, consumes it, and returns it. If not, it reports an error.

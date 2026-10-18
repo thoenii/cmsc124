@@ -35,7 +35,7 @@ func main() {
 		os.Exit(0)
 
 	default:
-		fmt.Println("Usage: ./run --tokenize <file>")
+		fmt.Fprintln(os.Stderr, "Usage: ./run [--tokenize | --parse | --eval] <file>")
 		os.Exit(64) // exit code 64: bad usage
 	}
 }
@@ -88,14 +88,15 @@ func runParseFile(path string) {
 	}
 
 	p := parser.NewParser(tokens)
-	exprs, err := p.ParseProgram()
+	prog, err := p.ParseProgram()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(65)
 	}
 
-	for _, expr := range exprs {
-		fmt.Println(parser.PrintStmt(expr))
+	// An empty program must print nothing, not a blank line.
+	if out := parser.PrintProgram(prog); out != "" {
+		fmt.Println(out)
 	}
 	os.Exit(0)
 }
@@ -149,26 +150,28 @@ func runEvalFile(path string) {
 	}
 
 	p := parser.NewParser(tokens)
-	stmts, err := p.ParseProgram()
+	prog, err := p.ParseProgram()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(65)
 	}
 
-	for _, stmt := range stmts {
-		// Only expression statements are evaluated for now.
-		// Other statement kinds (hiss, fang, blocks...) are Lab 4.
-		es, ok := stmt.(parser.ExprStmt)
-		if !ok {
-			continue
-		}
+	for _, stmt := range prog.Statements {
+		{
+			// Only expression statements are evaluated for now.
+			// Other statement kinds (hiss, fang, blocks...) are Lab 4.
+			es, ok := stmt.(parser.ExprStmt)
+			if !ok {
+				continue
+			}
 
-		val, err := evaluator.Evaluate(es.Expression)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(70)
+			val, err := evaluator.Evaluate(es.Expression)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				os.Exit(70)
+			}
+			fmt.Println(evaluator.Stringify(val))
 		}
-		fmt.Println(evaluator.Stringify(val))
+		os.Exit(0)
 	}
-	os.Exit(0)
 }

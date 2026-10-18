@@ -245,11 +245,7 @@ func (s *Scanner) scanToken() {
 	case ';':
 		s.addToken(SEMICOLON)
 	case '+':
-		if s.match('+') {
-			s.addToken(PLUS_PLUS)
-		} else {
-			s.addToken(PLUS)
-		}
+		s.addToken(PLUS)
 	case '-':
 		s.addToken(MINUS)
 	case '*':
