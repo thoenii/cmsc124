@@ -52,9 +52,8 @@ func runFile(path string) {
 	sc := scanner.NewScanner(string(source))
 	tokens := sc.ScanTokens()
 
-	// print each token in the frozen Token(...) format — same shape as
-	// runRepl() below, kept inline here rather than as a shared method
-	// since Token has no String() method defined
+	// print each token in the frozen Token(...) format, kept inline here
+	// rather than as a shared method since Token has no String() method defined
 	for _, tok := range tokens {
 		var literal interface{} = "null"
 		if tok.Literal != nil {
@@ -101,11 +100,33 @@ func runParseFile(path string) {
 	os.Exit(0)
 }
 
-/*
-runRepl reads one line at a time from stdin, scans it, and prints its
+// execStmt evaluates one statement and prints its value.
+// It returns the error instead of exiting, so each caller decides what to do:
+// file mode exits 70, the REPL prints the error and keeps going.
+func execStmt(stmt parser.Stmt) error {
+	var expr parser.Expr
+	switch s := stmt.(type) {
+	case parser.ExprStmt:
+		expr = s.Expression
+	case parser.HissStmt:
+		expr = s.Expression
+	default:
+		// Other statement kinds (fang, blocks...) are Lab 4.
+		return nil
+	}
 
-	tokens. A bad line must not kill the session, so errors from a single
-	line are reported and the loop continues to the next prompt.
+	val, err := evaluator.Evaluate(expr)
+	if err != nil {
+		return err
+	}
+	fmt.Println(evaluator.Stringify(val))
+	return nil
+}
+
+/*
+runRepl reads one line at a time from stdin, scans it, parses it, and prints
+the value of each statement. A bad line must not kill the session, so errors
+from a single line are reported and the loop continues to the next prompt.
 */
 func runRepl() {
 	scannerInput := bufio.NewScanner(os.Stdin)
@@ -122,14 +143,22 @@ func runRepl() {
 
 		s := scanner.NewScanner(line)
 		tokens := s.ScanTokens()
+		if s.HadError() {
+			continue // scanner already reported it; back to the prompt
+		}
 
-		// print each token in a readable format, same as runFile
-		for _, tok := range tokens {
-			var literal interface{} = "null"
-			if tok.Literal != nil {
-				literal = tok.Literal
+		p := parser.NewParser(tokens)
+		prog, err := p.ParseProgram()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			continue
+		}
+
+		for _, stmt := range prog.Statements {
+			if err := execStmt(stmt); err != nil {
+				fmt.Fprintln(os.Stderr, err)
+				break // stop this line, but keep the session alive
 			}
-			fmt.Printf("Token(type=%s, lexeme=%s, literal=%v, line=%d)\n", tok.Type, tok.Lexeme, literal, tok.Line)
 		}
 	}
 }
@@ -157,19 +186,10 @@ func runEvalFile(path string) {
 	}
 
 	for _, stmt := range prog.Statements {
-		// Only expression statements are evaluated for now.
-		// Other statement kinds (hiss, fang, blocks...) are Lab 4.
-		es, ok := stmt.(parser.ExprStmt)
-		if !ok {
-			continue
-		}
-
-		val, err := evaluator.Evaluate(es.Expression)
-		if err != nil {
+		if err := execStmt(stmt); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(70)
 		}
-		fmt.Println(evaluator.Stringify(val))
 	}
 	os.Exit(0)
 }
