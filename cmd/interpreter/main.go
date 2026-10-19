@@ -186,7 +186,20 @@ func runEvalFile(path string) {
 	}
 
 	for _, stmt := range prog.Statements {
-		if err := execStmt(stmt); err != nil {
+		var err error
+		switch s := stmt.(type) {
+		case parser.ExprStmt:
+			// Lab 3 behavior: a bare expression prints its value
+			var val evaluator.Value
+			val, err = evaluator.Evaluate(s.Expression)
+			if err == nil {
+				fmt.Println(evaluator.Stringify(val))
+			}
+		default:
+			// hiss, blocks, if, slither
+			err = evaluator.Exec(stmt)
+		}
+		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(70)
 		}
