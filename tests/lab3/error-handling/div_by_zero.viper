@@ -1,0 +1,1 @@
+hiss (10 / 0); // expect runtime error: Division by zero.

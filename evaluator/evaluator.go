@@ -6,6 +6,36 @@ import (
 	"fmt"
 )
 
+// Error Handling
+
+// RuntimeError carries the operator token so the report can include a line number.
+type RuntimeError struct {
+	Token   scanner.Token
+	Message string
+}
+
+func (e RuntimeError) Error() string {
+	return fmt.Sprintf("[line %d] Runtime error: %s", e.Token.Line, e.Message)
+}
+
+func checkNumberOperand(op scanner.Token, v Value) (float64, error) {
+	if n, ok := v.(float64); ok {
+		return n, nil
+	}
+	return 0, RuntimeError{op, "Operand must be a number."}
+}
+
+func checkNumberOperands(op scanner.Token, l, r Value) (float64, float64, error) {
+	a, okA := l.(float64)
+	b, okB := r.(float64)
+	if okA && okB {
+		return a, b, nil
+	}
+	return 0, 0, RuntimeError{op, "Operands must be numbers."}
+}
+
+// Expressions
+
 func Evaluate(expr parser.Expr) (Value, error) {
 	switch e := expr.(type) {
 	case parser.LiteralExpr:
@@ -29,57 +59,100 @@ func Evaluate(expr parser.Expr) (Value, error) {
 		}
 		return binaryOp(e.Operator, left, right)
 	default:
-		return nil, fmt.Errorf("not implemented yet")
+    	return nil, fmt.Errorf( "unsupported expression type: %T", expr)
 	}
 }
 
 func unaryOp(op scanner.Token, right Value) (Value, error) {
 	switch op.Type {
 	case scanner.MINUS:
-		n, _ := right.(float64)
+		n, err := checkNumberOperand(op, right)
+		if err != nil {
+			return nil, err
+		}
 		return 0 - n, nil // 0 - n so -0 never prints as "-0"
 	case scanner.BANG:
 		return !isTruthy(right), nil
 	}
-	return nil, fmt.Errorf("not implemented yet")
+	return nil, RuntimeError{op, "Unknown unary operator."}
 }
 
 func binaryOp(op scanner.Token, left, right Value) (Value, error) {
 	switch op.Type {
-	case scanner.MINUS:
-		a, _ := left.(float64)
-		b, _ := right.(float64)
-		return a - b, nil
-
-	case scanner.STAR:
-		a, _ := left.(float64)
-		b, _ := right.(float64)
-		return a * b, nil
-
-	case scanner.SLASH:
-		a, _ := left.(float64)
-		b, _ := right.(float64)
-		return a / b, nil
-
-	case scanner.PLUS:
-		if a, ok := left.(string); ok {
-			b, _ := right.(string)
-			return a + b, nil
-		}
-		a, _ := left.(float64)
-		b, _ := right.(float64)
-		return a + b, nil
-
 	case scanner.EQUAL_EQUAL:
 		return isEqual(left, right), nil
 
 	case scanner.BANG_EQUAL:
 		return !isEqual(left, right), nil
+
+	case scanner.PLUS:
+		if a, ok := left.(string); ok {
+			if b, ok := right.(string); ok {
+				return a + b, nil
+			}
+		}
+		if a, ok := left.(float64); ok {
+			if b, ok := right.(float64); ok {
+				return a + b, nil
+			}
+		}
+		return nil, RuntimeError{op, "Operands must be two numbers or two strings."}
+
+	case scanner.MINUS, scanner.STAR, scanner.SLASH,
+		scanner.GREATER, scanner.GREATER_EQUAL, scanner.LESS, scanner.LESS_EQUAL:
+
+		// one check for every numbers-only operator
+		a, b, err := checkNumberOperands(op, left, right)
+		if err != nil {
+			return nil, err
+		}
+		switch op.Type {
+		case scanner.MINUS:
+			return a - b, nil
+
+		case scanner.STAR:
+			return a * b, nil
+
+		case scanner.SLASH:
+			if b == 0 {
+				return nil, RuntimeError{op, "Division by zero."}
+			}
+			return a / b, nil
+
+		case scanner.GREATER:
+			l, r, err := checkNumberOperands(op, left, right)
+			if err != nil {
+				return nil, err
+			}
+			return l > r, nil
+
+		case scanner.GREATER_EQUAL:
+			l, r, err := checkNumberOperands(op, left, right)
+			if err != nil {
+				return nil, err
+			}
+			return l >= r, nil
+
+		case scanner.LESS:
+			l, r, err := checkNumberOperands(op, left, right)
+			if err != nil {
+				return nil, err
+			}
+			return l < r, nil
+
+		case scanner.LESS_EQUAL:
+			l, r, err := checkNumberOperands(op, left, right)
+			if err != nil {
+				return nil, err
+			}
+			return l <= r, nil
+		}
 	}
-	return nil, fmt.Errorf("not implemented yet")
+	return nil, RuntimeError{op, "Unknown binary operator."}
 }
 
-// statement executions
+// Statement executions
+
 func Exec(stmt parser.Stmt) error {
 	switch s := stmt.(type) {
 	case parser.ExprStmt:
@@ -129,24 +202,5 @@ func Exec(stmt parser.Stmt) error {
 			}
 		}
 	}
-	return fmt.Errorf("not implemented yet")
-}
-
-// Helper functions
-
-// Any types allowed. Different types are never equal, nil == nil is true,
-// strings compare by value. Go's == on two `any` values already does this.
-func isEqual(a, b Value) bool {
-	return a == b
-}
-
-// Only false and nil are falsey. 0 and "" are truthy.
-func isTruthy(v Value) bool {
-	if v == nil {
-		return false
-	}
-	if b, ok := v.(bool); ok {
-		return b
-	}
-	return true
+	return fmt.Errorf("unsupported statement type: %T", stmt)
 }
