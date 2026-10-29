@@ -109,21 +109,43 @@ func binaryOp(op scanner.Token, left, right Value) (Value, error) {
 		switch op.Type {
 		case scanner.MINUS:
 			return a - b, nil
+
 		case scanner.STAR:
 			return a * b, nil
+
 		case scanner.SLASH:
 			if b == 0 {
 				return nil, RuntimeError{op, "Division by zero."}
 			}
 			return a / b, nil
+
 		case scanner.GREATER:
-			return a > b, nil
+			l, r, err := checkNumberOperands(op, left, right)
+			if err != nil {
+				return nil, err
+			}
+			return l > r, nil
+
 		case scanner.GREATER_EQUAL:
-			return a >= b, nil
+			l, r, err := checkNumberOperands(op, left, right)
+			if err != nil {
+				return nil, err
+			}
+			return l >= r, nil
+
 		case scanner.LESS:
-			return a < b, nil
+			l, r, err := checkNumberOperands(op, left, right)
+			if err != nil {
+				return nil, err
+			}
+			return l < r, nil
+
 		case scanner.LESS_EQUAL:
-			return a <= b, nil
+			l, r, err := checkNumberOperands(op, left, right)
+			if err != nil {
+				return nil, err
+			}
+			return l <= r, nil
 		}
 	}
 	return nil, RuntimeError{op, "Unknown binary operator."}
