@@ -6,24 +6,24 @@ import (
 	"fmt"
 )
 
-func Evaluate(expr parser.Expr) (Value, error) {
+func (i *Interpreter) Evaluate(expr parser.Expr) (Value, error) {
 	switch e := expr.(type) {
 	case parser.LiteralExpr:
 		return e.Value, nil
 	case parser.GroupingExpr:
-		return Evaluate(e.Expression)
+		return i.Evaluate(e.Expression)
 	case parser.UnaryExpr:
-		right, err := Evaluate(e.Right)
+		right, err := i.Evaluate(e.Right)
 		if err != nil {
 			return nil, err
 		}
 		return unaryOp(e.Operator, right)
 	case parser.BinaryExpr:
-		left, err := Evaluate(e.Left)
+		left, err := i.Evaluate(e.Left)
 		if err != nil {
 			return nil, err
 		}
-		right, err := Evaluate(e.Right)
+		right, err := i.Evaluate(e.Right)
 		if err != nil {
 			return nil, err
 		}
@@ -80,14 +80,14 @@ func binaryOp(op scanner.Token, left, right Value) (Value, error) {
 }
 
 // statement executions
-func Exec(stmt parser.Stmt) error {
+func (i *Interpreter) Exec(stmt parser.Stmt) error {
 	switch s := stmt.(type) {
 	case parser.ExprStmt:
-		_, err := Evaluate(s.Expression)
+		_, err := i.Evaluate(s.Expression)
 		return err
 
 	case parser.HissStmt:
-		val, err := Evaluate(s.Expression)
+		val, err := i.Evaluate(s.Expression)
 		if err != nil {
 			return err
 		}
@@ -96,35 +96,35 @@ func Exec(stmt parser.Stmt) error {
 
 	case parser.BlockStmt:
 		for _, st := range s.Statements {
-			if err := Exec(st); err != nil {
+			if err := i.Exec(st); err != nil {
 				return err
 			}
 		}
 		return nil
 
 	case parser.IfStmt:
-		cond, err := Evaluate(s.Condition)
+		cond, err := i.Evaluate(s.Condition)
 		if err != nil {
 			return err
 		}
 		if isTruthy(cond) {
-			return Exec(s.ThenBranch)
+			return i.Exec(s.ThenBranch)
 		}
 		if s.ElseBranch != nil {
-			return Exec(s.ElseBranch)
+			return i.Exec(s.ElseBranch)
 		}
 		return nil
 
 	case parser.WhileStmt:
 		for {
-			cond, err := Evaluate(s.Condition)
+			cond, err := i.Evaluate(s.Condition)
 			if err != nil {
 				return err
 			}
 			if !isTruthy(cond) {
 				return nil
 			}
-			if err := Exec(s.Body); err != nil {
+			if err := i.Exec(s.Body); err != nil {
 				return err
 			}
 		}
