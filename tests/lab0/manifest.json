@@ -1,5 +1,5 @@
 {
-    "ext": ".src",
+    "ext": ".viper",
     "mode": "sidecar",
     "run_entrypoint": "./run"
 }
