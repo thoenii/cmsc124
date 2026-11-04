@@ -29,10 +29,7 @@ func main() {
 		runEvalFile(args[1])
 
 	case len(args) == 1:
-		// bare "./run <path>": preserve Lab 0's original contract unchanged,
-		// since every lab folder ever committed has to keep passing in CI
-		fmt.Println("Hello from CMSC 124!")
-		os.Exit(0)
+		runProgramFile(args[0])
 
 	default:
 		fmt.Fprintln(os.Stderr, "Usage: ./run [--tokenize | --parse | --eval] <file>")
@@ -100,27 +97,19 @@ func runParseFile(path string) {
 	os.Exit(0)
 }
 
-// execStmt evaluates one statement and prints its value.
-// It returns the error instead of exiting, so each caller decides what to do:
-// file mode exits 70, the REPL prints the error and keeps going.
-func execStmt(stmt parser.Stmt) error {
-	var expr parser.Expr
-	switch s := stmt.(type) {
-	case parser.ExprStmt:
-		expr = s.Expression
-	case parser.HissStmt:
-		expr = s.Expression
-	default:
-		// Other statement kinds (fang, blocks...) are Lab 4.
+func execStmt(interp *evaluator.Interpreter, stmt parser.Stmt) error {
+	// bare expression: evaluate and print the value (REPL only)
+	if s, ok := stmt.(parser.ExprStmt); ok {
+		val, err := interp.Evaluate(s.Expression)
+		if err != nil {
+			return err
+		}
+		fmt.Println(evaluator.Stringify(val))
 		return nil
 	}
 
-	val, err := evaluator.Evaluate(expr)
-	if err != nil {
-		return err
-	}
-	fmt.Println(evaluator.Stringify(val))
-	return nil
+	// everything else: Exec handles it (hiss prints inside Exec)
+	return interp.Exec(stmt)
 }
 
 /*
@@ -154,8 +143,10 @@ func runRepl() {
 			continue
 		}
 
+		interpreter := evaluator.NewInterpreter()
+
 		for _, stmt := range prog.Statements {
-			if err := execStmt(stmt); err != nil {
+			if err := execStmt(interpreter, stmt); err != nil {
 				fmt.Fprintln(os.Stderr, err)
 				break // stop this line, but keep the session alive
 			}
@@ -185,21 +176,54 @@ func runEvalFile(path string) {
 		os.Exit(65)
 	}
 
+	interpreter := evaluator.NewInterpreter()
+
 	for _, stmt := range prog.Statements {
 		var err error
 		switch s := stmt.(type) {
 		case parser.ExprStmt:
 			// Lab 3 behavior: a bare expression prints its value
 			var val evaluator.Value
-			val, err = evaluator.Evaluate(s.Expression)
+			val, err = interpreter.Evaluate(s.Expression)
 			if err == nil {
 				fmt.Println(evaluator.Stringify(val))
 			}
 		default:
 			// hiss, blocks, if, slither
-			err = evaluator.Exec(stmt)
+			err = interpreter.Exec(stmt)
 		}
 		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(70)
+		}
+	}
+	os.Exit(0)
+}
+
+func runProgramFile(path string) {
+	source, err := os.ReadFile(path)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Could not read file %q: %v\n", path, err)
+		os.Exit(64)
+	}
+
+	sc := scanner.NewScanner(string(source))
+	tokens := sc.ScanTokens()
+	if sc.HadError() {
+		os.Exit(65)
+	}
+
+	p := parser.NewParser(tokens)
+	prog, err := p.ParseProgram()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(65)
+	}
+
+	interpreter := evaluator.NewInterpreter()
+
+	for _, stmt := range prog.Statements {
+		if err := interpreter.Exec(stmt); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(70)
 		}
