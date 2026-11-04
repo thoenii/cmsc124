@@ -37,6 +37,16 @@ func main() {
 	}
 }
 
+// safely turns any Go panic into an ordinary error so no stack trace reaches the user.
+func safely(f func() error) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("Runtime error: internal error: %v", r)
+		}
+	}()
+	return f()
+}
+
 // runFile reads a source file, scans it into tokens, and prints them.
 // Exits 65 if the scanner reported any error, 0 on a fully clean scan.
 func runFile(path string) {
@@ -98,7 +108,6 @@ func runParseFile(path string) {
 }
 
 func execStmt(interp *evaluator.Interpreter, stmt parser.Stmt) error {
-	// bare expression: evaluate and print the value (REPL only)
 	if s, ok := stmt.(parser.ExprStmt); ok {
 		val, err := interp.Evaluate(s.Expression)
 		if err != nil {
@@ -119,36 +128,31 @@ from a single line are reported and the loop continues to the next prompt.
 */
 func runRepl() {
 	scannerInput := bufio.NewScanner(os.Stdin)
+	interpreter := evaluator.NewInterpreter()
 
 	for {
 		fmt.Print("> ")
-
 		if !scannerInput.Scan() {
-			// EOF (e.g. Ctrl+D) or read error: end the session cleanly
 			break
 		}
 
-		line := scannerInput.Text()
-
-		s := scanner.NewScanner(line)
+		s := scanner.NewScanner(scannerInput.Text())
 		tokens := s.ScanTokens()
 		if s.HadError() {
-			continue // scanner already reported it; back to the prompt
+			continue
 		}
 
-		p := parser.NewParser(tokens)
-		prog, err := p.ParseProgram()
+		prog, err := parser.NewParser(tokens).ParseProgram()
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			continue
 		}
 
-		interpreter := evaluator.NewInterpreter()
-
 		for _, stmt := range prog.Statements {
-			if err := execStmt(interpreter, stmt); err != nil {
+			err := safely(func() error { return execStmt(interpreter, stmt) })
+			if err != nil {
 				fmt.Fprintln(os.Stderr, err)
-				break // stop this line, but keep the session alive
+				break
 			}
 		}
 	}
@@ -179,19 +183,7 @@ func runEvalFile(path string) {
 	interpreter := evaluator.NewInterpreter()
 
 	for _, stmt := range prog.Statements {
-		var err error
-		switch s := stmt.(type) {
-		case parser.ExprStmt:
-			// Lab 3 behavior: a bare expression prints its value
-			var val evaluator.Value
-			val, err = interpreter.Evaluate(s.Expression)
-			if err == nil {
-				fmt.Println(evaluator.Stringify(val))
-			}
-		default:
-			// hiss, blocks, if, slither
-			err = interpreter.Exec(stmt)
-		}
+		err := safely(func() error { return execStmt(interpreter, stmt) })
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(70)
@@ -223,7 +215,8 @@ func runProgramFile(path string) {
 	interpreter := evaluator.NewInterpreter()
 
 	for _, stmt := range prog.Statements {
-		if err := interpreter.Exec(stmt); err != nil {
+		err := safely(func() error { return interpreter.Exec(stmt) })
+		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(70)
 		}
