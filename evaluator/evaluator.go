@@ -58,7 +58,7 @@ func (i *Interpreter) Evaluate(expr parser.Expr) (Value, error) {
 		}
 		return binaryOp(e.Operator, left, right)
 	default:
-    	return nil, fmt.Errorf( "unsupported expression type: %T", expr)
+		return nil, fmt.Errorf("unsupported expression type: %T", expr)
 	}
 }
 
@@ -108,43 +108,21 @@ func binaryOp(op scanner.Token, left, right Value) (Value, error) {
 		switch op.Type {
 		case scanner.MINUS:
 			return a - b, nil
-
 		case scanner.STAR:
 			return a * b, nil
-
 		case scanner.SLASH:
 			if b == 0 {
 				return nil, RuntimeError{op, "Division by zero."}
 			}
 			return a / b, nil
-
 		case scanner.GREATER:
-			l, r, err := checkNumberOperands(op, left, right)
-			if err != nil {
-				return nil, err
-			}
-			return l > r, nil
-
+			return a > b, nil
 		case scanner.GREATER_EQUAL:
-			l, r, err := checkNumberOperands(op, left, right)
-			if err != nil {
-				return nil, err
-			}
-			return l >= r, nil
-
+			return a >= b, nil
 		case scanner.LESS:
-			l, r, err := checkNumberOperands(op, left, right)
-			if err != nil {
-				return nil, err
-			}
-			return l < r, nil
-
+			return a < b, nil
 		case scanner.LESS_EQUAL:
-			l, r, err := checkNumberOperands(op, left, right)
-			if err != nil {
-				return nil, err
-			}
-			return l <= r, nil
+			return a <= b, nil
 		}
 	}
 	return nil, RuntimeError{op, "Unknown binary operator."}
