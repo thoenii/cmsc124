@@ -57,6 +57,17 @@ func (i *Interpreter) Evaluate(expr parser.Expr) (Value, error) {
 			return nil, err
 		}
 		return binaryOp(e.Operator, left, right)
+	case parser.VariableExpr:
+		return i.env.Get(e.Name)
+	case parser.AssignExpr:
+		value, err := i.Evaluate(e.Value)
+		if err != nil {
+			return nil, err
+		}
+		if err := i.env.Assign(e.Name, value); err != nil {
+			return nil, err
+		}
+		return value, nil
 	default:
 		return nil, fmt.Errorf("unsupported expression type: %T", expr)
 	}
@@ -143,13 +154,20 @@ func (i *Interpreter) Exec(stmt parser.Stmt) error {
 		fmt.Println(Stringify(val))
 		return nil
 
-	case parser.BlockStmt:
-		for _, st := range s.Statements {
-			if err := i.Exec(st); err != nil {
+	case parser.VarStmt:
+		var value Value = uninitialized{}
+		if s.Initializer != nil {
+			v, err := i.Evaluate(s.Initializer)
+			if err != nil {
 				return err
 			}
+			value = v
 		}
+		i.env.Define(s.Name.Lexeme, value)
 		return nil
+
+	case parser.BlockStmt:
+		return i.executeBlock(s.Statements, NewEnvironment(i.env))
 
 	case parser.IfStmt:
 		cond, err := i.Evaluate(s.Condition)
@@ -179,4 +197,16 @@ func (i *Interpreter) Exec(stmt parser.Stmt) error {
 		}
 	}
 	return fmt.Errorf("unsupported statement type: %T", stmt)
+}
+
+func (i *Interpreter) executeBlock(stmts []parser.Stmt, env *Environment) error {
+	previous := i.env
+	defer func() { i.env = previous }()
+	i.env = env
+	for _, st := range stmts {
+		if err := i.Exec(st); err != nil {
+			return err
+		}
+	}
+	return nil
 }
