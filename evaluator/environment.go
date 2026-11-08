@@ -16,6 +16,8 @@ func NewEnvironment(enclosing *Environment) *Environment {
 	}
 }
 
+type uninitialized struct{}
+
 // Define always creates (or overwrites) the name in THIS environment only.
 func (e *Environment) Define(name string, value any) {
 	e.values[name] = value
