@@ -26,6 +26,9 @@ func (e *Environment) Define(name string, value any) {
 // Get walks outward and returns the first match.
 func (e *Environment) Get(name scanner.Token) (any, error) {
 	if value, ok := e.values[name.Lexeme]; ok {
+		if _, un := value.(uninitialized); un {
+			return nil, RuntimeError{name, "Variable '" + name.Lexeme + "' is not initialized."}
+		}
 		return value, nil
 	}
 	if e.enclosing != nil {
