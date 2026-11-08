@@ -2,7 +2,6 @@ package evaluator
 
 import (
 	"cmsc124/scanner"
-	"fmt"
 )
 
 type Environment struct {
@@ -16,6 +15,8 @@ func NewEnvironment(enclosing *Environment) *Environment {
 		enclosing: enclosing,
 	}
 }
+
+type uninitialized struct{}
 
 // Define always creates (or overwrites) the name in THIS environment only.
 func (e *Environment) Define(name string, value any) {
@@ -46,5 +47,5 @@ func (e *Environment) Assign(name scanner.Token, value any) error {
 }
 
 func undefinedVariable(name scanner.Token) error {
-	return fmt.Errorf("[line %d] Runtime error: Undefined variable '%s'.", name.Line, name.Lexeme)
+	return RuntimeError{name, "Undefined variable '" + name.Lexeme + "'."}
 }
