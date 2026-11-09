@@ -1,0 +1,1 @@
+if (false) { hiss("then"); } else { hiss("else"); } // expect: else
