@@ -1,0 +1,1 @@
+hiss(a);   // expect runtime error: Undefined variable 'a'.
