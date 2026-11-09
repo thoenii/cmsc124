@@ -195,6 +195,28 @@ func (i *Interpreter) Exec(stmt parser.Stmt) error {
 				return err
 			}
 		}
+		
+	case parser.ForStmt:
+		// Desugar: { init; slither (cond) { body; incr; } }
+		// The outer block keeps the loop variable from leaking.
+		var cond parser.Expr = s.Condition
+		if cond == nil {
+			cond = parser.LiteralExpr{Value: true} // coil (;;) runs forever
+		}
+
+		var body parser.Stmt = s.Body
+		if s.Increment != nil {
+			body = parser.BlockStmt{Statements: []parser.Stmt{
+				s.Body,
+				parser.ExprStmt{Expression: s.Increment},
+			}}
+		}
+
+		var loop parser.Stmt = parser.WhileStmt{Condition: cond, Body: body}
+		if s.Initializer != nil {
+			loop = parser.BlockStmt{Statements: []parser.Stmt{s.Initializer, loop}}
+		}
+		return i.Exec(loop)
 	}
 	return fmt.Errorf("unsupported statement type: %T", stmt)
 }
