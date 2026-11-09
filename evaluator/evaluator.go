@@ -195,15 +195,9 @@ func (i *Interpreter) Exec(stmt parser.Stmt) error {
 				return err
 			}
 		}
-		
-	case parser.ForStmt:
-		// Desugar: { init; slither (cond) { body; incr; } }
-		// The outer block keeps the loop variable from leaking.
-		var cond parser.Expr = s.Condition
-		if cond == nil {
-			cond = parser.LiteralExpr{Value: true} // coil (;;) runs forever
-		}
 
+	case parser.ForStmt:
+		// loop body: original body, then the increment
 		var body parser.Stmt = s.Body
 		if s.Increment != nil {
 			body = parser.BlockStmt{Statements: []parser.Stmt{
@@ -212,11 +206,22 @@ func (i *Interpreter) Exec(stmt parser.Stmt) error {
 			}}
 		}
 
-		var loop parser.Stmt = parser.WhileStmt{Condition: cond, Body: body}
-		if s.Initializer != nil {
-			loop = parser.BlockStmt{Statements: []parser.Stmt{s.Initializer, loop}}
+		// missing condition means loop forever
+		var cond parser.Expr = s.Condition
+		if cond == nil {
+			cond = parser.LiteralExpr{Value: true}
 		}
-		return i.Exec(loop)
+
+		loop := parser.WhileStmt{Condition: cond, Body: body}
+
+		// outer block: initializer, then the loop (keeps the loop variable scoped)
+		var outer []parser.Stmt
+		if s.Initializer != nil {
+			outer = append(outer, s.Initializer)
+		}
+		outer = append(outer, loop)
+
+		return i.Exec(parser.BlockStmt{Statements: outer})
 	}
 	return fmt.Errorf("unsupported statement type: %T", stmt)
 }
