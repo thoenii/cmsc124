@@ -73,6 +73,8 @@ Script mode and the REPL share one evaluator. File mode creates one interpreter,
 | else | ELSE | alternative for a conditional statement |
 | coil | FOR | for-style loop (initializer, condition, increment) |
 | slither | WHILE | loop that repeats while a condition holds |
+| and | AND | logical AND, short-circuits |
+| or | OR | logical OR, short-circuits |
 | true | TRUE | boolean literal equal to true |
 | false | FALSE | boolean literal equal to false |
 | dead | NONE | absence of a value |
@@ -81,22 +83,25 @@ Keyword lexemes follow a snake theme. Internal token types (LET, PRINT, FOR, WHI
 
 ### Operators
 
-Precedence is listed from lowest (1) to highest (6).
+Precedence is listed from lowest (1) to highest (8).
 
 | Operator | Category | Operands | Associativity | Precedence |
 |---|---|---|---|---|
 | = | assignment | binary | right | 1 |
-| == | equality | binary | left | 2 |
-| != | equality | binary | left | 2 |
-| < | comparison | binary | left | 3 |
-| <= | comparison | binary | left | 3 |
-| > | comparison | binary | left | 3 |
-| >= | comparison | binary | left | 3 |
-| + | arithmetic | binary | left | 4 |
-| - | arithmetic | binary | left | 4 |
-| * | arithmetic | binary | left | 5 |
-| / | arithmetic | binary | left | 5 |
-| - (negation) | arithmetic | unary | right | 6 |
+| or | logical | binary | left | 2 |
+| and | logical | binary | left | 3 |
+| == | equality | binary | left | 4 |
+| != | equality | binary | left | 4 |
+| < | comparison | binary | left | 5 |
+| <= | comparison | binary | left | 5 |
+| > | comparison | binary | left | 5 |
+| >= | comparison | binary | left | 5 |
+| + | arithmetic | binary | left | 6 |
+| - | arithmetic | binary | left | 6 |
+| * | arithmetic | binary | left | 7 |
+| / | arithmetic | binary | left | 7 |
+| - (negation) | arithmetic | unary | right | 8 |
+| ! | logical | unary | right | 8 |
 
 Viper has no increment operator. Use `x = x + 1`.
 
@@ -173,7 +178,7 @@ Token types:
 - Arithmetic operators: PLUS, MINUS, STAR, SLASH
 - Assignment and comparison: EQUAL, EQUAL_EQUAL, BANG, BANG_EQUAL, LESS, LESS_EQUAL, GREATER, GREATER_EQUAL
 - Literals and identifiers: IDENTIFIER, STRING, NUMBER
-- Keywords: LET, PRINT, IF, ELSE, FOR, WHILE, TRUE, FALSE, NONE
+- Keywords: LET, PRINT, IF, ELSE, FOR, WHILE, AND, OR, TRUE, FALSE, NONE
 - End marker: EOF
 
 The format is frozen as of Lab 1; changes are recorded in the changelog.
@@ -208,7 +213,9 @@ printStmt      → "hiss" "(" expression ")" ";" ;
 exprStmt       → expression ";" ;
 
 expression     → assignment ;
-assignment     → IDENTIFIER "=" assignment | equality ;
+assignment     → IDENTIFIER "=" assignment | logicOr ;
+logicOr        → logicAnd ( "or" logicAnd )* ;
+logicAnd       → equality ( "and" equality )* ;
 equality       → comparison ( ( "==" | "!=" ) comparison )* ;
 comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
 term           → factor ( ( "+" | "-" ) factor )* ;
@@ -232,6 +239,7 @@ primary        → NUMBER | STRING | "true" | "false" | "dead"
 | Expression statement | Anywhere a statement is allowed. It needs a `;`. |
 | Block `{ ... }` | Anywhere a statement is allowed. It nests to any depth. Each block is its own scope. |
 | Assignment `x = value` | Anywhere an expression is allowed. It is right-associative, so `a = b = 3;` works, and it produces the assigned value. The left side must be a plain variable name. `1 + 2 = 3;` is a syntax error. |
+| `and` / `or` | Anywhere an expression is allowed. `or` binds looser than `and`, and both bind looser than equality. |
 | Variable read | Anywhere an expression is allowed. |
 
 ## Parse output format
@@ -261,7 +269,7 @@ An expression statement prints as just its expression, with no wrapper and no tr
 
 ## Semantics
 
-Defined in Lab 3 and Lab 4.
+Defined in Lab 3, Lab 4, and Lab 5.
 
 ### Values and types
 
@@ -298,8 +306,9 @@ All runtime output goes through a single function, `evaluator.Stringify`, so `--
 - Mixed types: there is no coercion anywhere. A number never becomes a string, and a string never becomes a number.
 - Comparison: `<`, `<=`, `>`, `>=` work on numbers only and return a boolean. Comparing a string with a number (or anything that isn't two numbers) is a runtime error.
 - Equality across types: `==` and `!=` work on any pair of values and never raise an error. Values of different types are never equal, so `1 == "1"` is `false` and `1 != "1"` is `true`. Strings compare by content, so `"ab" == "ab"` is `true`. `dead == dead` is `true`.
+- Logical operators: `and` and `or` short-circuit. The right operand is evaluated only if the left one does not already decide the result. `or` returns the left value if it is truthy, otherwise the right value. `and` returns the left value if it is falsey, otherwise the right value. They return the **deciding operand**, not a strict boolean, so `dead or "hi"` is `"hi"` and `1 and 2` is `2`. Truthiness follows the rule above, so `0 and 5` is `5`. An error in a skipped operand never happens: `false and (1 / 0)` is `false`. A chain such as `a or b or c` groups left to right and stops at the first operand that decides the result.
 - Division by zero: a runtime error (`Division by zero.`), exit code 70. This also covers `0 / 0`. We chose to reject it, instead of inheriting IEEE 754's `Infinity`, so that no infinity or NaN value ever exists in the language, and `Stringify` never has to print one.
-- Evaluation order: left to right. For a binary expression the left operand is evaluated first, then the right, then the operator is applied. Operands are always evaluated before their types are checked.
+- Evaluation order: left to right. For a binary expression the left operand is evaluated first, then the right, then the operator is applied. Operands are always evaluated before their types are checked. `and` and `or` are the exception, since the right operand may be skipped.
 - Type checks: every operator that needs numbers uses one shared helper, so the check and its error message are written once.
 
 ### Statements and output
@@ -346,6 +355,22 @@ Declaring creates and assigning updates. This is why `fang x` inside a block sha
 Scope (where a name can be seen) and lifetime (how long its storage exists) are the same for blocks, since Viper has no functions yet. Block variables are stack-dynamic: they last for one run of the block. Global variables last for the whole program. Lab 5 revisits this if functions can keep a scope alive after it ends. The interpreter stores environments in a Go map, but that is an implementation detail and not something the language promises.
 
 ### Control flow and functions
+
+Defined in Lab 5.
+
+#### Conditionals
+
+`if` evaluates its condition using the truthiness rule and runs exactly one branch. If the condition is falsey and there is no `else`, nothing runs. `else if` needs no extra grammar, because an `else` branch is itself a statement. An `else` binds to the nearest unmatched `if`.
+
+#### Loops
+
+`slither` checks its condition before every pass, so a condition that is falsey at the start means the body never runs. `coil` has three optional clauses, and a missing condition means the loop runs forever. `coil` is desugared when it executes into a block holding the initializer followed by a `slither` loop whose body is the original body plus the increment. The outer block keeps the loop variable from leaking into the enclosing scope. Both loops follow the Lab 4 scope rules.
+
+#### Logical operators
+
+`and` and `or` are described under **Operator semantics**. They short-circuit and return the deciding operand.
+
+#### Functions
 
 [TBD, Lab 5]
 
@@ -439,6 +464,7 @@ python3 run_tests.py tests/lab1
 python3 run_tests.py tests/lab2
 python3 run_tests.py tests/lab3
 python3 run_tests.py tests/lab4
+python3 run_tests.py tests/lab5
 ```
 
 Inline tests (Lab 3 onward) put the expected result in a comment on the same line as the code. Each error test file holds exactly one error annotation. Expected values are worked out by hand, not copied from the interpreter's output.
@@ -455,6 +481,8 @@ Inline annotations:
 Annotate the message text only, never the `[line N]` prefix.
 
 Lab 4 tests cover: shadowing, nested assignment through two scopes, undefined read, undefined assignment, invalid assignment target, missing `;`, several syntax errors in one file, uninitialized read, and a REPL-style check that a runtime error inside a block does not break the scope afterward.
+
+Lab 5 tests so far cover conditionals (every branch, nested `if`, dangling `else`, `else if` chains), loops (`slither` and `coil`, zero repetitions, no loop-variable leak), and logical operators (short-circuit for both operators, operand values, precedence, chaining, use inside conditions, and an error when the right side does run). The short-circuit tests put `1 / 0` on the skipped side, so they can only pass if that side is never evaluated.
 
 ## Sample code
 
@@ -488,6 +516,21 @@ inner
 outer
 ```
 
+Logical operator example:
+
+```
+fang name = dead;
+hiss(name or "guest");
+hiss(false and (1 / 0));
+```
+
+`./run` output:
+
+```
+guest
+false
+```
+
 ## Design rationale
 
 The language was designed to be dynamically typed and intentionally small enough to implement as an interpreter prototype within three months.
@@ -496,10 +539,12 @@ Lab 3 decisions favor strictness over convenience: no implicit conversions, `+` 
 
 Lab 4 continues this. Assignment never creates a variable, so a typo is an error instead of a silent new variable. Undefined names are caught at runtime so that Lab 5 functions can call each other without a separate resolution pass.
 
+Lab 5 keeps the Lox behavior for `and` and `or`: they return the deciding operand instead of a strict boolean. This costs nothing extra to implement, and it makes `or` usable for default values.
+
 ## Known limitations
 
-- `if`, `slither` and `coil` are parsed but not executed until Lab 5.
 - Functions arrive in Lab 5.
+- The REPL reads one line at a time, so a statement cannot span several lines.
 - `--eval` keeps its Lab 3 behavior and does not run declarations or blocks. Use plain `./run` for full programs.
 
 ## Changelog
@@ -511,3 +556,4 @@ Lab 4 continues this. Assignment never creates a variable, so a typo is an error
 | Lab 2 | Defined the grammar and operator precedence (assignment, equality, comparison, term, factor, unary). Added variable declarations, `hiss(...)` printing, blocks, if/else, `slither` and `coil` loops. Defined the `--parse` output format. The parser now returns a single `Program` root node. Removed the `++` operator and the `PLUS_PLUS` token; `++` now scans as two `PLUS` tokens. |
 | Lab 3 | Added the evaluator and runtime values (number, string, boolean, `dead`). Defined value printing (trimmed numbers, `dead`, unquoted strings), truthiness (only `false` and `dead` are falsey), strict typing for operators with no implicit conversion, `+` on two numbers or two strings only, equality across any types (mismatched types are unequal), left-to-right evaluation, and division by zero as a runtime error. Added the runtime error format and exit code 70. `hiss(...)` now prints in `--eval` and the REPL. Added `--eval`. |
 | Lab 4 | Plain `./run <file>` now executes programs: statements run in order and only `hiss` prints. Added environments, `fang` declarations, assignment, and blocks with lexical scope (innermost binding wins). Declaring creates a binding in the current scope; assigning only updates an existing one. Redeclaring in the same scope is allowed. Undefined names are runtime errors (exit 70). Added syntax errors for missing `;` and `}` and for invalid assignment targets, with synchronization and exit 65 before anything runs. The REPL keeps variables across lines and recovers after runtime errors. `tests/lab0/hello.viper` is now a real program. |
+| Lab 5 (in progress) | Added `AND` and `OR` tokens with `and` / `or` keywords. `and` and `or` short-circuit and return the deciding operand, with `or` below `and` in precedence. `if`, `slither` and `coil` now execute. `coil` is desugared into a block and a `slither` loop. |
