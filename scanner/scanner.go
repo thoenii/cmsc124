@@ -26,6 +26,8 @@ var keywords = map[string]TokenType{
 	"true":    TRUE,
 	"false":   FALSE,
 	"dead":    NONE,
+	"and":     AND,
+	"or":      OR,
 }
 
 // NewScanner creates a Scanner for the given source string, starting at line 1
