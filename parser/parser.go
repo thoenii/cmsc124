@@ -258,7 +258,7 @@ func (p *Parser) expression() (Expr, error) {
 
 // assignment parses `name = value`. Recurses on the right side so x = y = 3 works.
 func (p *Parser) assignment() (Expr, error) {
-	expr, err := p.equality()
+	expr, err := p.logicOr()
 	if err != nil {
 		return nil, err
 	}
@@ -278,6 +278,46 @@ func (p *Parser) assignment() (Expr, error) {
 		return nil, fmt.Errorf("[line %d] Invalid assignment target", equals.Line)
 	}
 
+	return expr, nil
+}
+
+// logicOr handles `or`. It sits below `and` in precedence.
+func (p *Parser) logicOr() (Expr, error) {
+	expr, err := p.logicAnd()
+	if err != nil {
+		return nil, err
+	}
+
+	for p.match(scanner.OR) {
+		operator := p.previous()
+
+		right, err := p.logicAnd()
+		if err != nil {
+			return nil, err
+		}
+
+		expr = LogicalExpr{Left: expr, Operator: operator, Right: right}
+	}
+	return expr, nil
+}
+
+// logicAnd handles `and`. Its operands are equality expressions.
+func (p *Parser) logicAnd() (Expr, error) {
+	expr, err := p.equality()
+	if err != nil {
+		return nil, err
+	}
+
+	for p.match(scanner.AND) {
+		operator := p.previous()
+
+		right, err := p.equality()
+		if err != nil {
+			return nil, err
+		}
+
+		expr = LogicalExpr{Left: expr, Operator: operator, Right: right}
+	}
 	return expr, nil
 }
 
