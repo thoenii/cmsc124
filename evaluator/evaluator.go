@@ -47,6 +47,21 @@ func (i *Interpreter) Evaluate(expr parser.Expr) (Value, error) {
 			return nil, err
 		}
 		return unaryOp(e.Operator, right)
+	case parser.LogicalExpr:
+		left, err := i.Evaluate(e.Left)
+		if err != nil {
+			return nil, err
+		}
+		if e.Operator.Type == scanner.OR {
+			if isTruthy(left) {
+				return left, nil
+			}
+		} else { // AND
+			if !isTruthy(left) {
+				return left, nil
+			}
+		}
+		return i.Evaluate(e.Right)
 	case parser.BinaryExpr:
 		left, err := i.Evaluate(e.Left)
 		if err != nil {
