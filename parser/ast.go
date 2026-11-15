@@ -112,12 +112,21 @@ type AssignExpr struct {
 	Value Expr
 }
 
+// LogicalExpr is `left and right` or `left or right`. It is separate from
+// BinaryExpr because it short-circuits, so the evaluator must not evaluate the right side up front.
+type LogicalExpr struct {
+	Left     Expr
+	Operator scanner.Token
+	Right    Expr
+}
+
 func (LiteralExpr) exprNode()  {}
 func (VariableExpr) exprNode() {}
 func (GroupingExpr) exprNode() {}
 func (UnaryExpr) exprNode()    {}
 func (BinaryExpr) exprNode()   {}
 func (AssignExpr) exprNode()   {}
+func (LogicalExpr) exprNode()  {}
 
 // ---------- Printing ----------
 
