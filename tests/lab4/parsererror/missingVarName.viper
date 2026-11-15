@@ -1,0 +1,1 @@
+fang = 1; // expect error: Expect variable name
