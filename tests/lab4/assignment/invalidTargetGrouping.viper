@@ -1,0 +1,2 @@
+fang a = 1;
+(a) = 2; // expect error: Invalid assignment target
