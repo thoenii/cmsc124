@@ -372,7 +372,7 @@ Defined in Lab 5.
 
 #### Functions
 
-[TBD, Lab 5]
+`venom` for functions instead of func and `spit` for its return 
 
 ## Native functions
 
