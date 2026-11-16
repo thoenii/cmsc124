@@ -14,6 +14,9 @@ const (
 	STAR  TokenType = "STAR"
 	SLASH TokenType = "SLASH"
 
+	AND TokenType = "AND"
+	OR  TokenType = "OR"
+
 	LESS    TokenType = "LESS"
 	GREATER TokenType = "GREATER"
 
