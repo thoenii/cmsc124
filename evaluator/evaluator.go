@@ -83,6 +83,28 @@ func (i *Interpreter) Evaluate(expr parser.Expr) (Value, error) {
 			return nil, err
 		}
 		return value, nil
+	case parser.CallExpr:
+		callee, err := i.Evaluate(e.Callee)
+		if err != nil {
+			return nil, err
+		}
+		args := make([]Value, 0, len(e.Arguments))
+		for _, a := range e.Arguments {
+			v, err := i.Evaluate(a)
+			if err != nil {
+				return nil, err
+			}
+			args = append(args, v)
+		}
+		fn, ok := callee.(Callable)
+		if !ok {
+			return nil, RuntimeError{e.Paren, "Can only call functions."}
+		}
+		if len(args) != fn.Arity() {
+			return nil, RuntimeError{e.Paren,
+				fmt.Sprintf("Expected %d arguments but got %d.", fn.Arity(), len(args))}
+		}
+		return fn.Call(i, args)
 	default:
 		return nil, fmt.Errorf("unsupported expression type: %T", expr)
 	}
@@ -237,6 +259,21 @@ func (i *Interpreter) Exec(stmt parser.Stmt) error {
 		outer = append(outer, loop)
 
 		return i.Exec(parser.BlockStmt{Statements: outer})
+
+	case parser.FunStmt:
+		i.env.Define(s.Name.Lexeme, &UserFunction{Decl: s, Closure: i.env})
+		return nil
+	
+	case parser.ReturnStmt:
+		var value Value
+		if s.Value != nil {
+			v, err := i.Evaluate(s.Value)
+			if err != nil {
+				return err
+			}
+			value = v
+		}
+		return ReturnSignal{Value: value}
 	}
 	return fmt.Errorf("unsupported statement type: %T", stmt)
 }
