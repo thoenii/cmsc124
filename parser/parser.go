@@ -44,8 +44,12 @@ func (p *Parser) ParseProgram() (Program, error) {
 
 // declaration: a fang (variable) declaration, or any other statement.
 func (p *Parser) declaration() (Stmt, error) {
+	
 	if p.match(scanner.LET) {
 		return p.varDeclaration()
+	}
+	if p.match(scanner.FUN) { // ASSUMED token name
+		return p.funDeclaration()
 	}
 	return p.statement()
 }
@@ -93,6 +97,9 @@ func (p *Parser) statement() (Stmt, error) {
 	}
 	if p.match(scanner.PRINT) {
 		return p.printStatement()
+	}
+	if p.match(scanner.RETURN) { // ASSUMED token name
+		return p.returnStatement()
 	}
 	return p.expressionStatement()
 }
@@ -414,7 +421,7 @@ func (p *Parser) unary() (Expr, error) {
 		return UnaryExpr{Operator: operator, Right: right}, nil
 	}
 
-	return p.primary()
+	return p.call()
 }
 
 // primary handles literals, variables, and grouped expressions
@@ -458,6 +465,87 @@ func (p *Parser) recordError(err error) {
 	}
 	p.errors = append(p.errors, err)
 	p.lastErrLine = line
+}
+
+// call handles f(a, b), and chains like f(1)(2)
+func (p *Parser) call() (Expr, error) {
+	expr, err := p.primary()
+	if err != nil {
+		return nil, err
+	}
+	for p.match(scanner.LEFT_PAREN) {
+		var args []Expr
+		if !p.check(scanner.RIGHT_PAREN) {
+			for {
+				arg, err := p.expression()
+				if err != nil {
+					return nil, err
+				}
+				args = append(args, arg)
+				if !p.match(scanner.COMMA) {
+					break
+				}
+			}
+		}
+		paren, err := p.consume(scanner.RIGHT_PAREN, "Expect ')' after arguments")
+		if err != nil {
+			return nil, err
+		}
+		expr = CallExpr{Callee: expr, Paren: paren, Arguments: args}
+	}
+	return expr, nil
+}
+
+// ---------- Function declaration ----------
+func (p *Parser) funDeclaration() (Stmt, error) {
+	name, err := p.consume(scanner.IDENTIFIER, "Expect function name")
+	if err != nil {
+		return nil, err
+	}
+	if _, err := p.consume(scanner.LEFT_PAREN, "Expect '(' after function name"); err != nil {
+		return nil, err
+	}
+
+	var params []scanner.Token
+	if !p.check(scanner.RIGHT_PAREN) {
+		for {
+			param, err := p.consume(scanner.IDENTIFIER, "Expect parameter name")
+			if err != nil {
+				return nil, err
+			}
+			params = append(params, param)
+			if !p.match(scanner.COMMA) { // ASSUMED token name
+				break
+			}
+		}
+	}
+	if _, err := p.consume(scanner.RIGHT_PAREN, "Expect ')' after parameters"); err != nil {
+		return nil, err
+	}
+	if _, err := p.consume(scanner.LEFT_BRACE, "Expect '{' before function body"); err != nil {
+		return nil, err
+	}
+	body, err := p.block()
+	if err != nil {
+		return nil, err
+	}
+	return FunStmt{Name: name, Params: params, Body: body}, nil
+}
+
+func (p *Parser) returnStatement() (Stmt, error) {
+	keyword := p.previous()
+	var value Expr
+	if !p.check(scanner.SEMICOLON) {
+		var err error
+		value, err = p.expression()
+		if err != nil {
+			return nil, err
+		}
+	}
+	if _, err := p.consume(scanner.SEMICOLON, "Expect ';' after return value"); err != nil {
+		return nil, err
+	}
+	return ReturnStmt{Keyword: keyword, Value: value}, nil
 }
 
 // ---------- Token helpers ----------
@@ -546,7 +634,9 @@ func (p *Parser) synchronize() {
 			scanner.WHILE,
 			scanner.FOR,
 			scanner.LEFT_BRACE,
-			scanner.RIGHT_BRACE:
+			scanner.RIGHT_BRACE,
+			scanner.FUN,
+			scanner.RETURN:
 			return
 		}
 		p.advance()

@@ -128,6 +128,31 @@ func (BinaryExpr) exprNode()   {}
 func (AssignExpr) exprNode()   {}
 func (LogicalExpr) exprNode()  {}
 
+// ---------- Functions ----------
+// FunStmt declares a function, e.g. `fun add(a, b) { ... }`
+type FunStmt struct {
+	Name   scanner.Token
+	Params []scanner.Token
+	Body   []Stmt
+}
+
+// ReturnStmt is `return expr;` (Value is nil for a bare `return;`)
+type ReturnStmt struct {
+	Keyword scanner.Token
+	Value   Expr
+}
+
+// CallExpr is a call: any expression followed by (arguments).
+type CallExpr struct {
+	Callee    Expr
+	Paren     scanner.Token // closing ')', used for error line numbers
+	Arguments []Expr
+}
+
+func (FunStmt) stmtNode()    {}
+func (ReturnStmt) stmtNode() {}
+func (CallExpr) exprNode()   {}
+
 // ---------- Printing ----------
 
 // PrintProgram prints one line per top-level statement, so the --parse
@@ -185,6 +210,26 @@ func PrintStmt(stmt Stmt) string {
 		}
 		return "(coil " + init + " " + cond + " " + incr + " " + PrintStmt(s.Body) + ")"
 
+	case FunStmt:
+		out := "(fun " + string(s.Name.Lexeme) + " ("
+		for idx, p := range s.Params {
+			if idx > 0 {
+				out += " "
+			}
+			out += string(p.Lexeme)
+		}
+		out += ")"
+		for _, inner := range s.Body {
+			out += " " + PrintStmt(inner)
+		}
+		return out + ")"
+
+	case ReturnStmt:
+		if s.Value == nil {
+			return "(return)"
+		}
+		return "(return " + PrintExpr(s.Value) + ")"
+
 	default:
 		return ""
 	}
@@ -212,6 +257,13 @@ func PrintExpr(expr Expr) string {
 
 	case AssignExpr:
 		return "(= " + string(e.Name.Lexeme) + " " + PrintExpr(e.Value) + ")"
+
+	case CallExpr:
+		out := "(call " + PrintExpr(e.Callee)
+		for _, a := range e.Arguments {
+			out += " " + PrintExpr(a)
+		}
+		return out + ")"
 
 	default:
 		return ""

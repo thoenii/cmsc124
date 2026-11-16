@@ -28,6 +28,8 @@ var keywords = map[string]TokenType{
 	"dead":    NONE,
 	"and":     AND,
 	"or":      OR,
+	"venom":   FUN,
+	"spit":    RETURN,
 }
 
 // NewScanner creates a Scanner for the given source string, starting at line 1
@@ -246,6 +248,8 @@ func (s *Scanner) scanToken() {
 		s.addToken(RIGHT_BRACE)
 	case ';':
 		s.addToken(SEMICOLON)
+	case ',':
+		s.addToken(COMMA)
 	case '+':
 		s.addToken(PLUS)
 	case '-':
