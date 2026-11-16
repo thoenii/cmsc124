@@ -8,6 +8,7 @@ const (
 	LEFT_BRACE  TokenType = "LEFT_BRACE"
 	RIGHT_BRACE TokenType = "RIGHT_BRACE"
 	SEMICOLON   TokenType = "SEMICOLON"
+	COMMA 		TokenType = "COMMA"
 
 	PLUS  TokenType = "PLUS"
 	MINUS TokenType = "MINUS"
@@ -40,6 +41,8 @@ const (
 	TRUE  TokenType = "TRUE"
 	FALSE TokenType = "FALSE"
 	NONE  TokenType = "NONE"
+	FUN   TokenType = "FUN"
+	RETURN TokenType = "RETURN"
 
 	EOF TokenType = "EOF"
 )
