@@ -133,13 +133,15 @@ func binaryOp(op scanner.Token, left, right Value) (Value, error) {
 		return !isEqual(left, right), nil
 
 	case scanner.PLUS:
-		if a, ok := left.(string); ok {
-			if b, ok := right.(string); ok {
+		switch a := left.(type) {
+		case string:
+			switch b := right.(type) {
+			case string:
 				return a + b, nil
 			}
-		}
-		if a, ok := left.(float64); ok {
-			if b, ok := right.(float64); ok {
+		case float64:
+			switch b := right.(type) {
+			case float64:
 				return a + b, nil
 			}
 		}

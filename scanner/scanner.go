@@ -95,43 +95,43 @@ func (s *Scanner) string() {
 	for s.peek() != '"' && !s.isAtEnd() {
 		c := s.peek()
 
-		if c == '\n' {
-			s.line++
-			value = append(value, c)
-			s.advance()
-		} else if c == '\\' {
-			s.advance()
-			escapeChar := s.peek()
-
-			switch escapeChar {
-			case 'n':
-				value = append(value, '\n')
-			case '"':
-				value = append(value, '"')
+		switch c {
+			case '\n':
+				s.line++
+				value = append(value, c)
+				s.advance()
 			case '\\':
-				value = append(value, '\\')
-			default:
-				s.reportError(s.line, fmt.Sprintf("Unsupported escape sequence '\\%c'", escapeChar))
+				s.advance()
+				escapeChar := s.peek()
 
-				// discard the rest of the broken string up to the closing quote
-				for s.peek() != '"' && !s.isAtEnd() {
-					if s.peek() == '\n' {
-						s.line++
+				switch escapeChar {
+				case 'n':
+					value = append(value, '\n')
+				case '"':
+					value = append(value, '"')	
+				case '\\':
+					value = append(value, '\\')
+				default:
+					s.reportError(s.line, fmt.Sprintf("Unsupported escape sequence '\\%c'", escapeChar))	
+					
+					// discard the rest of the broken string up to the closing quote
+					for s.peek() != '"' && !s.isAtEnd() {
+						if s.peek() == '\n' {
+							s.line++
+						}
+						s.advance()
 					}
-					s.advance()
-				}
 
-				if s.isAtEnd() {
+					if !s.isAtEnd() {
+						s.advance() // consume closing quote
+					}
 					return
 				}
-				s.advance() // consume closing quote
-				return
-			}
-			s.advance()
-		} else {
-			value = append(value, c)
-			s.advance()
-		}
+				s.advance()
+			default: 
+				value = append(value, c)
+				s.advance()
+		}	
 	}
 
 	// report unterminated string without closing quotation mark
@@ -139,7 +139,7 @@ func (s *Scanner) string() {
 		s.reportError(s.line, "Unterminated String")
 		return
 	}
-	s.advance()
+	s.advance() // consume the closing quote
 
 	s.addTokenLiteral(STRING, string(value))
 }
