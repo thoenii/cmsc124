@@ -25,28 +25,34 @@ func (e *Environment) Define(name string, value any) {
 
 // Get walks outward and returns the first match.
 func (e *Environment) Get(name scanner.Token) (any, error) {
-	if value, ok := e.values[name.Lexeme]; ok {
-		if _, un := value.(uninitialized); un {
-			return nil, RuntimeError{name, "Variable '" + name.Lexeme + "' is not initialized."}
+	value, found := e.values[name.Lexeme]
+	if !found {
+		if e.enclosing != nil {
+			return e.enclosing.Get(name)
 		}
+		return nil, undefinedVariable(name)
+	}
+
+	switch value.(type) {
+	case uninitialized:
+		return nil, RuntimeError{name, "Variable '" + name.Lexeme + "' is not initialized."}
+	default:
 		return value, nil
 	}
-	if e.enclosing != nil {
-		return e.enclosing.Get(name)
-	}
-	return nil, undefinedVariable(name)
 }
 
 // Assign walks outward and changes the first match. It never creates anything.
 func (e *Environment) Assign(name scanner.Token, value any) error {
-	if _, ok := e.values[name.Lexeme]; ok {
+	_, found := e.values[name.Lexeme]
+	if found {
 		e.values[name.Lexeme] = value
 		return nil
 	}
-	if e.enclosing != nil {
-		return e.enclosing.Assign(name, value)
+
+	if e.enclosing == nil {
+		return undefinedVariable(name)
 	}
-	return undefinedVariable(name)
+	return e.enclosing.Assign(name, value)
 }
 
 func undefinedVariable(name scanner.Token) error {

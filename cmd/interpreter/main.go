@@ -108,17 +108,18 @@ func runParseFile(path string) {
 }
 
 func execStmt(interp *evaluator.Interpreter, stmt parser.Stmt) error {
-	if s, ok := stmt.(parser.ExprStmt); ok {
-		val, err := interp.Evaluate(s.Expression)
-		if err != nil {
-			return err
-		}
-		fmt.Println(evaluator.Stringify(val))
-		return nil
+	exprStmt, ok := stmt.(parser.ExprStmt)
+	if !ok {
+		// everything else: Exec handles it (hiss prints inside Exec)
+		return interp.Exec(stmt)
 	}
 
-	// everything else: Exec handles it (hiss prints inside Exec)
-	return interp.Exec(stmt)
+	val, err := interp.Evaluate(exprStmt.Expression)
+	if err != nil {
+		return err
+	}
+	fmt.Println(evaluator.Stringify(val))
+	return nil
 }
 
 /*
@@ -155,6 +156,10 @@ func runRepl() {
 				break
 			}
 		}
+	}
+
+	if err := scannerInput.Err(); err != nil {
+		fmt.Fprintln(os.Stderr, "input error:", err)
 	}
 }
 
