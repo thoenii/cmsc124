@@ -1,3 +1,6 @@
+// function.go implements user-declared functions (fn). Each call runs in a
+// fresh environment enclosed by the function's closure, giving Viper lexical
+// scoping.
 package evaluator
 
 import (
@@ -5,14 +8,9 @@ import (
 	"errors"
 )
 
-// Callable is anything that can be called: user functions now, natives later.
-type Callable interface {
-	Arity() int
-	Call(in *Interpreter, args []Value) (Value, error)
-}
-
 // ReturnSignal carries a return value up through Exec's error returns.
-// It is not a real error; Call intercepts it.
+// It is not a real error; UserFunction.Call intercepts it. Error handlers
+// elsewhere must let it pass through untouched.
 type ReturnSignal struct{ Value Value }
 
 func (ReturnSignal) Error() string { return "return outside function" }
@@ -26,11 +24,11 @@ type UserFunction struct {
 func (f *UserFunction) Arity() int { return len(f.Decl.Params) }
 
 func (f *UserFunction) Call(in *Interpreter, args []Value) (Value, error) {
-	// Fresh environment per call, parented to the DEFINITION environment
-	// (not the call site). This is what makes Viper lexically scoped.
+	// Parent is the definition environment, not the call site. One
+	// environment per call keeps recursive calls from sharing parameters.
 	env := NewEnvironment(f.Closure)
-	for idx, p := range f.Decl.Params {
-		env.Define(p.Lexeme, args[idx]) // ASSUMED: same Define signature as VarStmt
+	for i, p := range f.Decl.Params {
+		env.Define(p.Lexeme, args[i])
 	}
 
 	err := in.executeBlock(f.Decl.Body, env)
@@ -42,5 +40,9 @@ func (f *UserFunction) Call(in *Interpreter, args []Value) (Value, error) {
 	if err != nil {
 		return nil, err
 	}
-	return nil, nil // fell off the end: returns dead (nil)
+	return nil, nil // fell off the end
+}
+
+func (f *UserFunction) String() string {
+	return "<fn " + f.Decl.Name.Lexeme + ">"
 }
