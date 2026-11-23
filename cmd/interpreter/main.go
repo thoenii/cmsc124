@@ -108,18 +108,18 @@ func runParseFile(path string) {
 }
 
 func execStmt(interp *evaluator.Interpreter, stmt parser.Stmt) error {
-	exprStmt, ok := stmt.(parser.ExprStmt)
-	if !ok {
+	switch s := stmt.(type) {
+	case parser.ExprStmt:
+		val, err := interp.Evaluate(s.Expression)
+		if err != nil {
+			return err
+		}
+		fmt.Println(evaluator.Stringify(val))
+		return nil
+	default:
 		// everything else: Exec handles it (hiss prints inside Exec)
 		return interp.Exec(stmt)
 	}
-
-	val, err := interp.Evaluate(exprStmt.Expression)
-	if err != nil {
-		return err
-	}
-	fmt.Println(evaluator.Stringify(val))
-	return nil
 }
 
 /*
