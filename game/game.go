@@ -19,7 +19,7 @@ type Game struct {
 }
 
 func NewGame(w, h int, seed int64) *Game {
-	source := rand.NewSource(seed)
+	source := rand.NewSource(seed) 	//stored in the game struct so that the apple can be seeded
 
 	g := &Game{
 		Width: w, Height: h,

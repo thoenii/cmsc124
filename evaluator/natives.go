@@ -9,11 +9,26 @@ import (
 	"strings"
 )
 
-// TODO: registerNatives defines every built-in in the global environment.
+// registerNatives defines every built-in in the global environment.
+func registerNatives(env *Environment, w *World, stdin *bufio.Reader) {
+	natives := []*NativeFn{
+		NewNative("str", 1, nativeStr),
+		newInputNative(stdin),
+	}
+	natives = append(natives, newGameNatives(w)...)
+	for _, n := range natives {
+		env.Define(n.name, n)
+	}
+}
 
-// TODO: replace with the real implementation.
+// nativeStr converts a number to its string form, using the same formatting
+// as hiss (5.0 -> "5", 2.5 -> "2.5").
 func nativeStr(args []Value) (Value, error) {
-	return nil, nil
+	n, ok := args[0].(float64)
+	if !ok {
+		return nil, errors.New("str: argument must be a number.")
+	}
+	return Stringify(n), nil
 }
 
 // nativeInput returns a native that reads one line from stdin, without the
